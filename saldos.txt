@@ -1,0 +1,20 @@
+cd "C:\MAZ_Command Center PA"
+git fetch origin
+git worktree add -b pbi/saldos "C:\MAZ_Command Center PA - saldos" origin/main
+
+This creates the folder C:\MAZ_Command Center PA - saldos on branch pbi/saldos.
+
+Copy the 3 items from the unzipped Saldos_DBX_v2 folder into C:\MAZ_Command Center PA - saldos\BrewDat Prod MAZ Panama\Command Center\:
+
+Saldos_DBX.pbip
+Saldos_DBX.Report
+Saldos_DBX.SemanticModel
+
+Then commit and push:
+
+powershell
+cd "C:\MAZ_Command Center PA - saldos"
+git add -A
+git status
+git commit -m "Saldos: origen Databricks, warehouse brewdat-maz-sales-pa-adb-ep01-p"
+git push -u origin pbi/saldos
