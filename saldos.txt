@@ -1,3 +1,11 @@
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca;
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp;
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrk;
+-- P1. GLPCA partition values (metadata only, no data scan)
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca;
+
+
+-- VE1b. The 2 output rows (all columns)
+SELECT * FROM WarehousePanama.dbo.venta_exportacion;
+
+-- VE1c. The raw SAP extract, most recent invoices first
+SELECT TOP 20 * FROM WarehousePanama.dbo.Venta_Externa ORDER BY [Factura] DESC;
+
+
