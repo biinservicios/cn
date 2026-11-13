@@ -1,22 +1,7 @@
-cd "C:\MAZ_Command Center PA"
-git fetch origin
-git worktree add -b pbi/cero-fallos "C:\MAZ_Command Center PA - cero-fallos" origin/main
-
-2. Copy the files. From the unzipped Cero_Fallos_DBX_v1 folder, copy these into C:\MAZ_Command Center PA - cero-fallos\BrewDat Prod MAZ Panama\Command Center\:
-
-Cero_Fallos_DBX.pbip
-Cero_Fallos_DBX.Report
-Cero_Fallos_DBX.SemanticModel
-
-DonÕt copy LEEME.txt or the .sql file.
-
-If you saved the PBIP after refreshing it in Desktop, copy that saved version instead. Just make sure it doesnÕt include the .pbi folders (they hold your local data cache).
-
-3. Commit and push:
-
-powershell
-cd "C:\MAZ_Command Center PA - cero-fallos"
-git add -A
-git status
-git commit -m "Cero Fallos: solo Databricks (zero_failures_monthly_share + pa_customer), warehouse brewdat-maz-sales-pa-adb-ep01-p"
-git push -u origin pbi/cero-fallos
+-- D5. pa_invoice HL by invoice day, this month
+SELECT invoice_date, ROUND(SUM(total_volume), 2) AS hl, COUNT(*) AS lineas
+FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
+WHERE invoice_date >= trunc(current_date(), 'MM')
+  AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
+GROUP BY 1
+ORDER BY 1;
