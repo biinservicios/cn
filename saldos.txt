@@ -1,7 +1,21 @@
--- P2. VBRP partition values (metadata only, seconds)
-SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp;
+powershell
+cd "C:\MAZ_Command Center PA"
+git fetch origin
+git worktree add -b pbi/venta-externa "C:\MAZ_Command Center PA - venta-externa" origin/main
 
--- VE3e. The 2 invoices in VBRP without a partition filter (a one-time lookup, may take a few minutes)
-SELECT __partition_column, vbeln, posnr, fkimg, vrkme, volum, voleh, pstyv, matnr, aubel, erdat
-FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
-WHERE vbeln IN ('9104003124', '9104003125');
+2. Copy the files. From the unzipped Venta_Externa_DBX_v2 folder, copy these 3 items into C:\MAZ_Command Center PA - venta-externa\BrewDat Prod MAZ Panama\Command Center\:
+
+Venta_Externa_DBX.pbip
+Venta_Externa_DBX.Report
+Venta_Externa_DBX.SemanticModel
+
+Don’t copy LEEME.txt or the .sql file.
+
+3. Commit and push:
+
+powershell
+cd "C:\MAZ_Command Center PA - venta-externa"
+git add -A
+git status
+git commit -m "Venta Externa: nuevo reporte sobre Databricks (GLPCA/VBRP/VBRK), warehouse brewdat-maz-sales-pa-adb-ep01-p"
+git push -u origin pbi/venta-externa
