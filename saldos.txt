@@ -1,27 +1,7 @@
+-- P2. VBRP partition values (metadata only, seconds)
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp;
 
--- VE3b. GLPCA, March 2026 partition only, the export account
-SELECT *
-FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
-WHERE __partition_column = '202603'
-  AND racct = 'S413101AT0';
-
--- VE3c. VBRP: the 2 invoices (tests whether VBRP uses the same partition logic)
-SELECT __partition_column, vbeln, posnr, fkimg, vrkme, volum, voleh, netwr, aubel, matnr, pstyv, erdat
+-- VE3e. The 2 invoices in VBRP without a partition filter (a one-time lookup, may take a few minutes)
+SELECT __partition_column, vbeln, posnr, fkimg, vrkme, volum, voleh, pstyv, matnr, aubel, erdat
 FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
-WHERE __partition_column = '202603'
-  AND vbeln IN ('9104003124', '9104003125');
-
--- VE3d. VBRK: header of the 2 invoices
-SELECT __partition_column, vbeln, fkart, fkdat, kunrg, kunag, bukrs, erdat
-FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrk
-WHERE __partition_column = '202603'
-  AND vbeln IN ('9104003124', '9104003125');
-
--- VE4b. The whole of 2026 for the account (simulates a Power BI refresh: note how long it takes)
-SELECT __partition_column, rbukrs, COUNT(*) AS lineas, ROUND(SUM(hsl), 2) AS importe_hsl,
-       MIN(budat) AS desde, MAX(budat) AS hasta
-FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
-WHERE __partition_column BETWEEN '202601' AND '202612'
-  AND racct = 'S413101AT0'
-GROUP BY 1, 2
-ORDER BY 1, 2;
+WHERE vbeln IN ('9104003124', '9104003125');
