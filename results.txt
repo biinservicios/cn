@@ -1,0 +1,12 @@
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	9c363ded-0f23-4eb1-b752-80eb450195d5	brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/finance/sap_pr3/copecac_glpca	2024-06-27T01:28:47.160+00:00	2026-11-13T06:13:58.000+00:00	["__partition_column"]	[]	8644	557183818865	{"delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days","delta.enableChangeDataFeed":"true"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
+
+
+
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	4e7fac0f-c89a-4287-a8ab-816afe8cf910	brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/sales/sap_pr3/copecac_vbrp	2024-07-18T20:51:44.526+00:00	2026-11-13T11:42:56.000+00:00	["__partition_column"]	[]	61926	218227876162	{"delta.enableChangeDataFeed":"true","delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
+
+
+
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	ee7e88e8-8fc8-4f43-9cd9-7a4a730c20b9	brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrk	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/sales/sap_pr3/copecac_vbrk	2024-07-23T23:30:10.424+00:00	2026-11-13T11:29:23.000+00:00	["__partition_column"]	[]	3623	41058258308	{"delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days","delta.enableChangeDataFeed":"true"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
