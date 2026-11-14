@@ -1,13 +1,14 @@
--- SQL SERVER: which Region the old DSR table gives these routes
-SELECT [Ruta], [Regi—n], COUNT(*) AS filas, SUM([MesMetaTotal]) AS meta
+-- SQL SERVER: official, per route
+SELECT [Ruta], [Regi—n], [Category Group],
+       ROUND(SUM([Mes]), 2) AS mes_hl, ROUND(SUM([MesMetaTotal]), 2) AS meta_hl
 FROM WarehousePanama.dbo.DSR_M_2018_Reloaded
-WHERE [KPI] = 'Hls'
-  AND [Ruta] IN ('PAM113','PAM116','PAM117','PAM118','PAM119','PAM124','PAM127','PAM132','PAM139','PAM191','PAM211','PAM238')
-GROUP BY [Ruta], [Regi—n]
-ORDER BY [Ruta], [Regi—n];
+WHERE [KPI] = 'Hls' AND [Category Group] IN ('Beer Core', 'Beer Premium', 'NABs')
+GROUP BY [Ruta], [Regi—n], [Category Group]
+ORDER BY [Ruta], [Category Group];
 
 
--- DATABRICKS: per route and Region, how many customers and how much quota this month
+
+-- DATABRICKS: ours (same logic as DSRBase v2, gold), per route
 WITH c AS (
     SELECT regexp_replace(trim(CAST(customer_short_code AS STRING)), '^0+', '') AS cliente, sales_zone_code AS zv,
            trim(CAST(sales_subregion_code AS STRING)) AS subregion,
@@ -27,14 +28,44 @@ cli AS (
     FROM c LEFT JOIN h ON h.k = c.subregion AND h.rn = 1
     WHERE c.rn = 1
 ),
+mat AS (
+    SELECT material, category_group FROM (
+        SELECT regexp_replace(trim(CAST(sku AS STRING)), '^0+', '') AS material, category_group,
+               ROW_NUMBER() OVER (PARTITION BY regexp_replace(trim(CAST(sku AS STRING)), '^0+', '') ORDER BY date_since DESC) AS rn
+        FROM brewdat_uc_delta_maz_prod.slv_maz_masterdata_manual.pa_excise_rules) t
+    WHERE rn = 1
+),
+v AS (
+    SELECT regexp_replace(trim(CAST(sold_to_customer_short_code AS STRING)), '^0+', '') AS cliente,
+           regexp_replace(trim(CAST(product_short_code AS STRING)), '^0+', '') AS material, SUM(total_volume) AS hl
+    FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
+    WHERE invoice_date >= trunc(current_date(), 'MM') AND invoice_date < add_months(trunc(current_date(), 'MM'), 1)
+      AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
+    GROUP BY 1, 2
+),
 q AS (
-    SELECT regexp_replace(trim(CAST(customer_code AS STRING)), '^0+', '') AS cliente, SUM(CAST(target_hl AS DOUBLE)) AS meta
+    SELECT regexp_replace(trim(CAST(customer_code AS STRING)), '^0+', '') AS cliente,
+           regexp_replace(trim(CAST(product_short_code AS STRING)), '^0+', '') AS material, SUM(CAST(target_hl AS DOUBLE)) AS meta
     FROM brewdat_uc_maz_prod.brz_maz_sales_manual.pa_sales_target_customer_material_current_month
     WHERE CAST(reference_year AS INT) = year(current_date()) AND CAST(reference_month AS INT) = month(current_date())
-    GROUP BY 1
+    GROUP BY 1, 2
+),
+x AS (
+    SELECT COALESCE(v.cliente, q.cliente) AS cliente, COALESCE(v.material, q.material) AS material,
+           COALESCE(v.hl, 0) AS hl, COALESCE(q.meta, 0) AS meta
+    FROM v FULL OUTER JOIN q ON q.cliente = v.cliente AND q.material = v.material
+),
+xc AS ( SELECT COALESCE(cli.zv, 'No Data') AS ruta, cli.region, x.material, x.hl, x.meta FROM x LEFT JOIN cli ON cli.cliente = x.cliente ),
+rr AS (
+    SELECT ruta, region FROM (
+        SELECT ruta, region, SUM(meta) AS meta,
+               ROW_NUMBER() OVER (PARTITION BY ruta ORDER BY SUM(meta) DESC, COUNT(*) DESC) AS rn
+        FROM xc WHERE ruta <> 'No Data' GROUP BY ruta, region) t
+    WHERE rn = 1 AND meta > 0
 )
-SELECT cli.zv, cli.region, COUNT(*) AS clientes, ROUND(SUM(COALESCE(q.meta, 0)), 2) AS meta
-FROM cli LEFT JOIN q ON q.cliente = cli.cliente
-WHERE cli.zv IN ('PAM113','PAM116','PAM117','PAM118','PAM119','PAM124','PAM127','PAM132','PAM139','PAM191','PAM211','PAM238')
-GROUP BY 1, 2
-ORDER BY 1, 2;
+SELECT xc.ruta, COALESCE(rr.region, xc.region) AS region, mat.category_group,
+       ROUND(SUM(xc.hl), 2) AS mes_hl, ROUND(SUM(xc.meta), 2) AS meta_hl
+FROM xc LEFT JOIN rr ON rr.ruta = xc.ruta LEFT JOIN mat ON mat.material = xc.material
+WHERE mat.category_group IN ('Beer Core', 'Beer Premium', 'NABs')
+GROUP BY 1, 2, 3
+ORDER BY 1, 3;
