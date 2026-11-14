@@ -1,46 +1,573 @@
-Ruta	Región	filas	meta
-PAM113	Metro	501	1005.89
-PAM116	ON VIP	346	795.035
-PAM117	ON VIP	854	679.858
-PAM118	ON VIP	352	541.888
-PAM119	ON VIP	324	255.97
-PAM124	ON VIP	671	1267.001
-PAM127	ON VIP	555	1583.248
-PAM132	Metro	70	4.647
-PAM139	Metro	316	1316.978
-PAM191	Metro	474	5931.009
-PAM211	Cliente Interno	170	0
-PAM211	Interior Centrales	6	0
-PAM211	Metro	38	0
+Ruta	Región	Category Group	mes_hl	meta_hl
+NULL	NULL	Beer Core	0	0
+NULL	NULL	Beer Premium	0	0
+No Data	Interior Oeste	Beer Core	495.87	3445.2
+No Data	Metro	Beer Core	3207.96	8790.28
+No Data	Interior Centrales	Beer Core	707.38	2936.28
+No Data	Metro	Beer Premium	189.01	626.69
+No Data	Interior Oeste	Beer Premium	28.01	282.54
+No Data	Interior Centrales	Beer Premium	13.77	226.2
+No Data	Interior Oeste	NABs	11.29	101.67
+No Data	Interior Centrales	NABs	34.97	279.89
+No Data	Metro	NABs	64.99	257.55
+PAM111	Metro	Beer Core	1297.68	2628.97
+PAM111	Metro	Beer Premium	134.38	199.98
+PAM111	Metro	NABs	178.63	827.66
+PAM112	Metro	Beer Core	735.49	1448.89
+PAM112	Metro	Beer Premium	38.88	132.94
+PAM112	Metro	NABs	51.96	88.59
+PAM113	Metro	Beer Core	307.96	760.03
+PAM113	Metro	Beer Premium	21.38	52.04
+PAM113	Metro	NABs	74.63	193.82
+PAM114	Metro	Beer Core	316.66	747.94
+PAM114	Metro	Beer Premium	67.36	88.08
+PAM114	Metro	NABs	440.52	1439.07
+PAM115	Metro	Beer Core	163.65	534.98
+PAM115	Metro	Beer Premium	25.4	69.91
+PAM115	Metro	NABs	72.68	194.18
+PAM116	ON VIP	Beer Core	47.4	199
+PAM116	ON VIP	Beer Premium	22.41	86.09
+PAM116	ON VIP	NABs	277.59	509.94
+PAM117	ON VIP	Beer Core	80.2	219.92
+PAM117	ON VIP	Beer Premium	36.31	100.01
+PAM117	ON VIP	NABs	165.27	359.92
+PAM118	ON VIP	Beer Core	98.93	289.97
+PAM118	ON VIP	Beer Premium	38.48	109.98
+PAM118	ON VIP	NABs	117.02	141.94
+PAM119	ON VIP	Beer Core	77.56	171.06
+PAM119	ON VIP	Beer Premium	19.43	43.98
+PAM119	ON VIP	NABs	21.07	40.93
+PAM120	K.A	Beer Core	332.16	990.59
+PAM120	K.A	Beer Premium	69.1	257.53
+PAM120	K.A	NABs	94.31	328.83
+PAM121	K.A	Beer Core	511.86	1157.82
+PAM121	K.A	Beer Premium	71.86	171.3
+PAM121	K.A	NABs	463.46	938
+PAM122	K.A	Beer Core	2464.99	6085.99
+PAM122	K.A	Beer Premium	116.83	168.51
+PAM122	K.A	NABs	339.66	922.69
+PAM123	K.A	Beer Core	244.09	593.53
+PAM123	K.A	Beer Premium	69.3	110.02
+PAM123	K.A	NABs	307.94	743.1
+PAM124	ON VIP	Beer Core	558.48	1024.07
+PAM124	ON VIP	Beer Premium	29.34	87.96
+PAM124	ON VIP	NABs	53.38	154.97
+PAM125	K.A	Beer Core	1480	3918.8
+PAM125	K.A	Beer Premium	497.39	909.95
+PAM125	K.A	NABs	1637.48	4766.33
+PAM126	K.A	Beer Core	242.31	529.92
+PAM126	K.A	Beer Premium	57.04	112.16
+PAM126	K.A	NABs	239.69	567.32
+PAM127	ON VIP	Beer Core	83.72	227.96
+PAM127	ON VIP	Beer Premium	13.6	51.99
+PAM127	ON VIP	NABs	511.71	1303.3
+PAM128	K.A	Beer Core	821	2164.12
+PAM128	K.A	Beer Premium	65.1	110.05
+PAM128	K.A	NABs	155	466.38
+PAM129	K.A	Beer Core	332.45	641.5
+PAM129	K.A	Beer Premium	96.38	152.58
+PAM129	K.A	NABs	343.23	838.89
+PAM130	Metro	Beer Core	218.9	536.92
+PAM130	Metro	Beer Premium	11.58	54.3
+PAM130	Metro	NABs	19.03	65.73
+PAM131	Metro	Beer Core	1439.9	2945.1
+PAM131	Metro	Beer Premium	109.26	355.94
+PAM131	Metro	NABs	187.55	522.15
+PAM132	Metro	Beer Core	21.95	0.12
+PAM132	Metro	Beer Premium	0	0.96
+PAM132	Metro	NABs	0.24	3.56
+PAM133	Metro	Beer Core	1474.92	3047.77
+PAM133	Metro	Beer Premium	210.47	589.42
+PAM133	Metro	NABs	205.77	809.76
+PAM134	Metro	Beer Core	306.71	937.17
+PAM134	Metro	Beer Premium	13.27	60.69
+PAM134	Metro	NABs	54.36	117.97
+PAM135	Metro	Beer Core	1279.63	2825.11
+PAM135	Metro	Beer Premium	85.55	249.88
+PAM135	Metro	NABs	167.84	429.58
+PAM136	Metro	Beer Core	312.78	618.91
+PAM136	Metro	Beer Premium	37.15	50.04
+PAM136	Metro	NABs	85.22	231.95
+PAM137	Metro	Beer Core	437.11	875.58
+PAM137	Metro	Beer Premium	51.28	35.32
+PAM137	Metro	NABs	99.04	231.63
+PAM138	Metro	Beer Core	361.03	724.46
+PAM138	Metro	Beer Premium	27.17	37.36
+PAM138	Metro	NABs	84.54	226.26
+PAM139	Metro	Beer Core	437.1	1047.15
+PAM139	Metro	Beer Premium	21.54	38.84
+PAM139	Metro	NABs	78.06	230.99
+PAM140	Metro	Beer Core	429.81	999.51
+PAM140	Metro	Beer Premium	51.67	47.28
+PAM140	Metro	NABs	100.36	256.72
+PAM141	Metro	Beer Core	833.61	1357.24
+PAM141	Metro	Beer Premium	50.58	334.06
+PAM141	Metro	NABs	100.65	1585.02
+PAM142	K.A	Beer Core	239.27	653.17
+PAM142	K.A	Beer Premium	55.35	139.14
+PAM142	K.A	NABs	271.96	683.19
+PAM143	K.A	Beer Core	346.91	555.85
+PAM143	K.A	Beer Premium	91.43	143.87
+PAM143	K.A	NABs	461.72	942.59
+PAM144	K.A	Beer Core	353.36	497.63
+PAM144	K.A	Beer Premium	56.21	114.26
+PAM144	K.A	NABs	283.44	461.64
+PAM145	K.A	Beer Core	143.74	228.48
+PAM145	K.A	Beer Premium	23.86	45.51
+PAM145	K.A	NABs	185.37	502.01
+PAM146	K.A	Beer Core	94.82	175.96
+PAM146	K.A	Beer Premium	26.72	33.19
+PAM146	K.A	NABs	139.24	345.02
+PAM147	Metro	Beer Core	0	0
+PAM147	Metro	Beer Premium	0.16	0
+PAM147	Metro	NABs	0.09	0
+PAM148	Metro	Beer Core	1.73	0
+PAM148	Metro	Beer Premium	0.14	0
+PAM148	Metro	NABs	0.07	0
+PAM152	Interior Oeste	Beer Core	0	0
+PAM152	Interior Oeste	Beer Premium	59.64	0
+PAM152	Interior Oeste	NABs	0	0
+PAM15A	Metro	Beer Core	227.2	383.1
+PAM15A	Metro	Beer Premium	25.2	45.38
+PAM15A	Metro	NABs	27.94	119.54
+PAM15B	Metro	Beer Core	71.67	205.77
+PAM15B	Metro	Beer Premium	17.32	41.42
+PAM15B	Metro	NABs	32.57	93.33
+PAM191	Metro	Beer Core	1517.27	5138.93
+PAM191	Metro	Beer Premium	85.49	222.17
+PAM191	Metro	NABs	270.49	565.19
+PAM192	Metro	Beer Core	375.89	1086.3
+PAM192	Metro	Beer Premium	23.82	105.57
+PAM192	Metro	NABs	77.56	314.33
+PAM193	Metro	Beer Core	357.75	871.94
+PAM193	Metro	Beer Premium	26.56	48.31
+PAM193	Metro	NABs	78.17	193.88
+PAM194	Metro	Beer Core	579.41	1257.21
+PAM194	Metro	Beer Premium	24.12	73.3
+PAM194	Metro	NABs	74.73	188.53
+PAM1A1	Interior Centrales	Beer Core	370.44	1025.02
+PAM1A1	Interior Centrales	Beer Premium	71.84	130.08
+PAM1A1	Interior Centrales	NABs	66.49	204.8
+PAM1A3	Interior Centrales	Beer Core	254.99	750.09
+PAM1A3	Interior Centrales	Beer Premium	208.75	60.01
+PAM1A3	Interior Centrales	NABs	214.3	462.98
+PAM1A6	Interior Centrales	Beer Core	389.39	825.11
+PAM1A6	Interior Centrales	Beer Premium	26.51	34.97
+PAM1A6	Interior Centrales	NABs	79.05	469.94
+PAM1A8	Interior Centrales	Beer Core	321.88	804.96
+PAM1A8	Interior Centrales	Beer Premium	31.42	54.99
+PAM1A8	Interior Centrales	NABs	82.26	219.99
+PAM1A9	Interior Centrales	Beer Core	216.42	510.03
+PAM1A9	Interior Centrales	Beer Premium	21.93	40.08
+PAM1A9	Interior Centrales	NABs	7.79	23.96
+PAM1AA	Interior Centrales	Beer Core	777.86	1619.99
+PAM1AA	Interior Centrales	Beer Premium	68.39	119.86
+PAM1AA	Interior Centrales	NABs	130.07	379.81
+PAM1AB	Interior Centrales	Beer Core	276.17	689.97
+PAM1AB	Interior Centrales	Beer Premium	15.87	25.02
+PAM1AB	Interior Centrales	NABs	91.48	224.84
+PAM1AC	Interior Centrales	Beer Core	953.97	2410.06
+PAM1AC	Interior Centrales	Beer Premium	89.14	324.94
+PAM1AC	Interior Centrales	NABs	216.3	549.72
+PAM1AE	Interior Centrales	Beer Core	1467.03	3350.08
+PAM1AE	Interior Centrales	Beer Premium	296.29	499.97
+PAM1AE	Interior Centrales	NABs	135.18	569.72
+PAM1AG	Interior Centrales	Beer Core	295.43	880.01
+PAM1AG	Interior Centrales	Beer Premium	17.65	54.88
+PAM1AG	Interior Centrales	NABs	33.44	69.88
+PAM211	Metro	Beer Core	0	0
+PAM211	Cliente Interno	Beer Core	11.67	0
+PAM211	Interior Centrales	Beer Core	0	0
+PAM211	Metro	Beer Premium	0	0
+PAM211	Cliente Interno	Beer Premium	7.41	0
+PAM211	Interior Centrales	NABs	0	0
+PAM211	Metro	NABs	0	0
+PAM211	Cliente Interno	NABs	0.58	0
+PAM311	Interior Centrales	Beer Core	327.32	649.96
+PAM311	Interior Centrales	Beer Premium	21.69	50.01
+PAM311	Interior Centrales	NABs	109.65	314.79
+PAM312	Interior Centrales	Beer Core	107.23	240.01
+PAM312	Interior Centrales	Beer Premium	12.06	19.98
+PAM312	Interior Centrales	NABs	46.05	129.9
+PAM313	Interior Centrales	Beer Core	63.39	120.03
+PAM313	Interior Centrales	Beer Premium	8.09	13.04
+PAM313	Interior Centrales	NABs	39.87	124.85
+PAM314	Interior Centrales	Beer Core	182.93	360.06
+PAM314	Interior Centrales	Beer Premium	19.18	29.91
+PAM314	Interior Centrales	NABs	72.11	219.8
+PAM316	Interior Centrales	Beer Core	228.93	399.96
+PAM316	Interior Centrales	Beer Premium	18.14	33
+PAM316	Interior Centrales	NABs	62.32	179.81
+PAM317	Interior Centrales	Beer Core	94.15	160.07
+PAM317	Interior Centrales	Beer Premium	12.07	22.03
+PAM317	Interior Centrales	NABs	47.5	130.04
+PAM321	Interior Centrales	Beer Core	151.92	320
+PAM321	Interior Centrales	Beer Premium	14.78	35.07
+PAM321	Interior Centrales	NABs	48.47	134.91
+PAM331	Interior Oeste	Beer Core	419.01	619.26
+PAM331	Interior Oeste	Beer Premium	11.38	18.89
+PAM331	Interior Oeste	NABs	51.12	119.97
+PAM332	Interior Oeste	Beer Core	455.11	650.72
+PAM332	Interior Oeste	Beer Premium	9.69	22.89
+PAM332	Interior Oeste	NABs	47.68	101.46
+PAM333	Interior Oeste	Beer Core	430.71	620.96
+PAM333	Interior Oeste	Beer Premium	21.39	44.51
+PAM333	Interior Oeste	NABs	48.14	116.55
+PAM334	Interior Oeste	Beer Core	785.41	1860
+PAM334	Interior Oeste	Beer Premium	9.31	21.98
+PAM334	Interior Oeste	NABs	17.87	68.38
+PAM335	Interior Oeste	Beer Core	202.59	365.44
+PAM335	Interior Oeste	Beer Premium	7.36	17.41
+PAM335	Interior Oeste	NABs	44.78	102.13
+PAM336	Interior Oeste	Beer Core	275.9	542.37
+PAM336	Interior Oeste	Beer Premium	17.77	19.22
+PAM336	Interior Oeste	NABs	50.64	148.17
+PAM341	Interior Oeste	Beer Core	363.06	600.86
+PAM341	Interior Oeste	Beer Premium	31.51	125.57
+PAM341	Interior Oeste	NABs	101.08	294.54
+PAM342	Interior Oeste	Beer Core	295.5	684.84
+PAM342	Interior Oeste	Beer Premium	7.8	26.58
+PAM342	Interior Oeste	NABs	72.55	184.8
+PAM351	Interior Oeste	Beer Core	819.16	2792.03
+PAM351	Interior Oeste	Beer Premium	227.5	721.11
+PAM351	Interior Oeste	NABs	204.46	783.98
+PAM352	Interior Oeste	Beer Core	128.06	296.02
+PAM352	Interior Oeste	Beer Premium	11.72	29.86
+PAM352	Interior Oeste	NABs	51.69	112.28
+PAM353	Interior Oeste	Beer Core	207.94	451.4
+PAM353	Interior Oeste	Beer Premium	7.13	27.06
+PAM353	Interior Oeste	NABs	52.17	110.25
+PAM354	Interior Oeste	Beer Core	109.27	265.99
+PAM354	Interior Oeste	Beer Premium	35.84	252.52
+PAM354	Interior Oeste	NABs	46.86	105.26
+PAM355	Interior Oeste	Beer Core	174.49	382.4
+PAM355	Interior Oeste	Beer Premium	9.3	44.69
+PAM355	Interior Oeste	NABs	26.06	91.68
+PAM357	Interior Oeste	Beer Core	146.57	379.91
+PAM357	Interior Oeste	Beer Premium	55.83	261.6
+PAM357	Interior Oeste	NABs	134.25	284.05
+PAM361	Interior Oeste	Beer Core	679.51	1698.92
+PAM361	Interior Oeste	Beer Premium	18.65	58.75
+PAM361	Interior Oeste	NABs	84.57	408.19
+PAM362	Interior Oeste	Beer Core	259.82	539.2
+PAM362	Interior Oeste	Beer Premium	28.43	36.39
+PAM362	Interior Oeste	NABs	63.75	198.24
+PAM363	Interior Oeste	Beer Core	194.07	350.95
+PAM363	Interior Oeste	Beer Premium	9.67	30.45
+PAM363	Interior Oeste	NABs	58.21	162.49
+PAM364	Interior Oeste	Beer Core	180.4	407.31
+PAM364	Interior Oeste	Beer Premium	6.93	21.29
+PAM364	Interior Oeste	NABs	54.07	144.9
+PAM371	Interior Oeste	Beer Core	525.74	1311.92
+PAM371	Interior Oeste	Beer Premium	88.23	140.01
+PAM371	Interior Oeste	NABs	127.54	372.83
+PAM372	Interior Oeste	Beer Core	257.08	569.45
+PAM372	Interior Oeste	Beer Premium	15.69	40.75
+PAM372	Interior Oeste	NABs	73.04	135.17
+PAM380	Interior Centrales	Beer Core	976.23	2424.77
+PAM380	Interior Centrales	Beer Premium	31.03	59.95
+PAM380	Interior Centrales	NABs	109.61	289.72
+PAM381	Interior Centrales	Beer Core	108.28	289.91
+PAM381	Interior Centrales	Beer Premium	8.25	14.97
+PAM381	Interior Centrales	NABs	42.14	214.77
+PAM382	Interior Centrales	Beer Core	356.61	875.05
+PAM382	Interior Centrales	Beer Premium	16.54	40
+PAM382	Interior Centrales	NABs	76.95	194.96
+PAM383	Interior Centrales	Beer Core	634.23	1360.04
+PAM383	Interior Centrales	Beer Premium	20.8	31.99
+PAM383	Interior Centrales	NABs	57.26	124.99
+PAM384	Interior Centrales	Beer Core	212.12	500.07
+PAM384	Interior Centrales	Beer Premium	7.53	20.99
+PAM384	Interior Centrales	NABs	43.02	169.96
+PAM385	Interior Centrales	Beer Core	183.54	480
+PAM385	Interior Centrales	Beer Premium	7.72	21.98
+PAM385	Interior Centrales	NABs	60.25	164.99
+PAM389	Interior Centrales	Beer Core	0	0
+PAM389	Interior Centrales	Beer Premium	0	0
+PAM389	Interior Centrales	NABs	0	0
 
 
 
-
-zv	region	clientes	meta
-PAM113	Cliente Interno	1	0
-PAM113	Metro	558	1005.64
-PAM116	K.A	431	0
-PAM116	ON VIP	376	794.94
-PAM117	K.A	22	0
-PAM117	ON VIP	409	679.93
-PAM118	K.A	3	0
-PAM118	ON VIP	393	541.85
-PAM119	K.A	81	0
-PAM119	ON VIP	746	255.99
-PAM124	K.A	1	0
-PAM124	ON VIP	266	1267.06
-PAM127	K.A	1282	0
-PAM127	ON VIP	530	1583.23
-PAM132	Cliente Interno	1	0
-PAM132	Metro	982	4.64
-PAM139	Cliente Interno	1	0
-PAM139	Metro	415	1317.16
-PAM191	Cliente Interno	1	0
-PAM191	Metro	1324	5931.43
-PAM211	null	1	0
-PAM211	Cliente Interno	387	0
-PAM211	Interior Centrales	272	0
-PAM211	Interior Oeste	2	0
-PAM211	Metro	1662	0
-PAM238	Cliente Interno	1	0
-PAM238	Metro	1	0
+ruta	region	category_group	mes_hl	meta_hl
+PAM111	Metro	Beer Core	1214.22	2794.2
+PAM111	Metro	Beer Premium	126.59	213.17
+PAM111	Metro	NABs	170.73	828.52
+PAM112	Metro	Beer Core	633.55	1448.84
+PAM112	Metro	Beer Premium	33.70	132.98
+PAM112	Metro	NABs	40.98	88.6
+PAM113	Metro	Beer Core	269.27	759.77
+PAM113	Metro	Beer Premium	17.48	52
+PAM113	Metro	NABs	67.95	193.87
+PAM114	Metro	Beer Core	306.79	749.92
+PAM114	Metro	Beer Premium	66.69	89.49
+PAM114	Metro	NABs	439.17	1438.67
+PAM115	Metro	Beer Core	120.89	532.69
+PAM115	Metro	Beer Premium	20.10	68.5
+PAM115	Metro	NABs	48.84	194.17
+PAM116	ON VIP	Beer Core	45.48	198.98
+PAM116	ON VIP	Beer Premium	22.41	86.03
+PAM116	ON VIP	NABs	277.59	509.94
+PAM117	ON VIP	Beer Core	76.31	220.01
+PAM117	ON VIP	Beer Premium	33.82	99.98
+PAM117	ON VIP	NABs	163.82	359.94
+PAM118	ON VIP	Beer Core	89.54	289.94
+PAM118	ON VIP	Beer Premium	38.15	109.99
+PAM118	ON VIP	NABs	114.79	141.91
+PAM119	ON VIP	Beer Core	59.68	171.02
+PAM119	ON VIP	Beer Premium	14.95	44.02
+PAM119	ON VIP	NABs	19.37	40.96
+PAM120	K.A	Beer Core	284.31	990.52
+PAM120	K.A	Beer Premium	60.18	257.5
+PAM120	K.A	NABs	87.37	328.05
+PAM121	K.A	Beer Core	511.86	1157.76
+PAM121	K.A	Beer Premium	70.35	171.27
+PAM121	K.A	NABs	458.52	937.84
+PAM122	K.A	Beer Core	2425.83	6086.32
+PAM122	K.A	Beer Premium	108.59	168.53
+PAM122	K.A	NABs	328.02	922.64
+PAM123	K.A	Beer Core	232.30	593.53
+PAM123	K.A	Beer Premium	55.12	110
+PAM123	K.A	NABs	286.47	743.12
+PAM124	ON VIP	Beer Core	478.59	1024.09
+PAM124	ON VIP	Beer Premium	26.10	87.97
+PAM124	ON VIP	NABs	38.41	155.01
+PAM125	K.A	Beer Core	1403.92	3918.8
+PAM125	K.A	Beer Premium	466.22	909.96
+PAM125	K.A	NABs	1490.96	4767.92
+PAM126	K.A	Beer Core	223.18	529.89
+PAM126	K.A	Beer Premium	49.94	112.16
+PAM126	K.A	NABs	238.44	567.3
+PAM127	ON VIP	Beer Core	81.93	228.03
+PAM127	ON VIP	Beer Premium	13.60	51.96
+PAM127	ON VIP	NABs	511.54	1303.24
+PAM128	K.A	Beer Core	571.88	2164.08
+PAM128	K.A	Beer Premium	52.34	110.05
+PAM128	K.A	NABs	143.26	466.34
+PAM129	K.A	Beer Core	329.04	641.49
+PAM129	K.A	Beer Premium	96.38	152.57
+PAM129	K.A	NABs	342.55	838.82
+PAM130	Metro	Beer Core	188.22	551.47
+PAM130	Metro	Beer Premium	10.14	54.33
+PAM130	Metro	NABs	18.81	65.74
+PAM131	Metro	Beer Core	1294.37	2945.13
+PAM131	Metro	Beer Premium	106.97	355.94
+PAM131	Metro	NABs	175.56	522.29
+PAM132	Metro	Beer Core	21.95	0.12
+PAM132	Metro	Beer Premium	0.00	0.96
+PAM132	Metro	NABs	0.24	3.56
+PAM133	Metro	Beer Core	1395.16	3047.81
+PAM133	Metro	Beer Premium	201.27	589.42
+PAM133	Metro	NABs	186.95	809.65
+PAM134	Metro	Beer Core	270.32	937.13
+PAM134	Metro	Beer Premium	12.61	60.69
+PAM134	Metro	NABs	51.58	118
+PAM135	Metro	Beer Core	1089.33	2825
+PAM135	Metro	Beer Premium	80.29	249.84
+PAM135	Metro	NABs	150.60	429.53
+PAM136	Metro	Beer Core	288.59	618.87
+PAM136	Metro	Beer Premium	30.97	50.06
+PAM136	Metro	NABs	75.32	232.04
+PAM137	Metro	Beer Core	390.27	875.55
+PAM137	Metro	Beer Premium	44.37	35.32
+PAM137	Metro	NABs	85.02	231.57
+PAM138	Metro	Beer Core	329.13	724.46
+PAM138	Metro	Beer Premium	22.49	37.38
+PAM138	Metro	NABs	79.45	226.36
+PAM139	Metro	Beer Core	372.83	1047.11
+PAM139	Metro	Beer Premium	13.06	38.86
+PAM139	Metro	NABs	63.24	231.19
+PAM140	Metro	Beer Core	403.04	995.14
+PAM140	Metro	Beer Premium	50.81	47.24
+PAM140	Metro	NABs	95.01	256.66
+PAM141	Metro	Beer Core	774.73	1357.22
+PAM141	Metro	Beer Premium	37.76	334.1
+PAM141	Metro	NABs	88.84	1585.04
+PAM142	K.A	Beer Core	223.22	653.17
+PAM142	K.A	Beer Premium	50.98	139.15
+PAM142	K.A	NABs	259.74	683.08
+PAM143	K.A	Beer Core	346.91	555.87
+PAM143	K.A	Beer Premium	91.43	143.86
+PAM143	K.A	NABs	461.72	942.41
+PAM144	K.A	Beer Core	353.36	497.59
+PAM144	K.A	Beer Premium	56.22	114.24
+PAM144	K.A	NABs	283.44	461.6
+PAM145	K.A	Beer Core	143.74	228.49
+PAM145	K.A	Beer Premium	23.86	45.49
+PAM145	K.A	NABs	185.37	501.99
+PAM146	K.A	Beer Core	94.82	175.94
+PAM146	K.A	Beer Premium	26.72	33.19
+PAM146	K.A	NABs	139.24	344.88
+PAM147	Metro	Beer Core	0.00	26.44
+PAM147	Metro	Beer Premium	0.16	0.1
+PAM147	Metro	NABs	0.09	0.19
+PAM148	Metro	Beer Core	1.73	0.74
+PAM148	Metro	Beer Premium	0.14	0
+PAM148	Metro	NABs	0.07	0.26
+PAM151	Metro	Beer Core	2971.79	8588.93
+PAM151	Metro	Beer Premium	159.83	613.43
+PAM151	Metro	NABs	58.06	256.58
+PAM152	Interior Oeste	Beer Core	0.00	1.64
+PAM152	Interior Oeste	Beer Premium	59.64	0.1
+PAM152	Interior Oeste	NABs	0.00	0.46
+PAM15A	Metro	Beer Core	227.20	383.04
+PAM15A	Metro	Beer Premium	25.20	45.36
+PAM15A	Metro	NABs	27.94	119.53
+PAM15B	Metro	Beer Core	71.67	205.79
+PAM15B	Metro	Beer Premium	17.32	41.42
+PAM15B	Metro	NABs	32.57	93.29
+PAM191	Metro	Beer Core	1517.27	5139.28
+PAM191	Metro	Beer Premium	85.49	222.22
+PAM191	Metro	NABs	270.50	565.22
+PAM192	Metro	Beer Core	375.89	1086.27
+PAM192	Metro	Beer Premium	23.82	105.55
+PAM192	Metro	NABs	77.56	314.37
+PAM193	Metro	Beer Core	356.34	871.56
+PAM193	Metro	Beer Premium	26.56	48.35
+PAM193	Metro	NABs	77.19	193.76
+PAM194	Metro	Beer Core	579.13	1256.78
+PAM194	Metro	Beer Premium	24.12	73.34
+PAM194	Metro	NABs	74.44	188.36
+PAM1A1	Interior Centrales	Beer Core	341.75	1079.93
+PAM1A1	Interior Centrales	Beer Premium	66.70	143.11
+PAM1A1	Interior Centrales	NABs	60.96	205.25
+PAM1A3	Interior Centrales	Beer Core	183.27	750.01
+PAM1A3	Interior Centrales	Beer Premium	198.07	60.04
+PAM1A3	Interior Centrales	NABs	54.69	463.47
+PAM1A6	Interior Centrales	Beer Core	375.04	824.9
+PAM1A6	Interior Centrales	Beer Premium	26.46	34.97
+PAM1A6	Interior Centrales	NABs	74.48	469.87
+PAM1A8	Interior Centrales	Beer Core	317.16	804.99
+PAM1A8	Interior Centrales	Beer Premium	31.42	54.98
+PAM1A8	Interior Centrales	NABs	80.39	219.9
+PAM1A9	Interior Centrales	Beer Core	163.04	538.83
+PAM1A9	Interior Centrales	Beer Premium	15.10	40.06
+PAM1A9	Interior Centrales	NABs	6.03	24.46
+PAM1AA	Interior Centrales	Beer Core	774.06	1620.02
+PAM1AA	Interior Centrales	Beer Premium	68.39	119.97
+PAM1AA	Interior Centrales	NABs	128.78	379.77
+PAM1AB	Interior Centrales	Beer Core	194.07	690.19
+PAM1AB	Interior Centrales	Beer Premium	10.05	25.07
+PAM1AB	Interior Centrales	NABs	63.31	225.1
+PAM1AC	Interior Centrales	Beer Core	880.79	2406.03
+PAM1AC	Interior Centrales	Beer Premium	67.39	324.8
+PAM1AC	Interior Centrales	NABs	200.88	549.48
+PAM1AE	Interior Centrales	Beer Core	1382.72	3349.78
+PAM1AE	Interior Centrales	Beer Premium	292.01	500.01
+PAM1AE	Interior Centrales	NABs	115.82	569.8
+PAM1AG	Interior Centrales	Beer Core	263.63	880
+PAM1AG	Interior Centrales	Beer Premium	13.03	54.97
+PAM1AG	Interior Centrales	NABs	31.96	69.92
+PAM211	Cliente Interno	Beer Core	11.67	0
+PAM211	Cliente Interno	Beer Premium	7.41	0
+PAM211	Cliente Interno	NABs	0.58	0
+PAM311	Interior Centrales	Beer Core	323.85	650
+PAM311	Interior Centrales	Beer Premium	21.69	50.04
+PAM311	Interior Centrales	NABs	109.58	314.75
+PAM312	Interior Centrales	Beer Core	107.23	240.03
+PAM312	Interior Centrales	Beer Premium	12.06	20.14
+PAM312	Interior Centrales	NABs	46.05	129.8
+PAM313	Interior Centrales	Beer Core	63.39	120.06
+PAM313	Interior Centrales	Beer Premium	8.09	13.03
+PAM313	Interior Centrales	NABs	39.87	124.85
+PAM314	Interior Centrales	Beer Core	182.93	359.96
+PAM314	Interior Centrales	Beer Premium	19.18	29.87
+PAM314	Interior Centrales	NABs	72.11	219.63
+PAM316	Interior Centrales	Beer Core	228.93	399.94
+PAM316	Interior Centrales	Beer Premium	18.14	33.06
+PAM316	Interior Centrales	NABs	62.32	179.76
+PAM317	Interior Centrales	Beer Core	94.15	159.89
+PAM317	Interior Centrales	Beer Premium	12.07	22.02
+PAM317	Interior Centrales	NABs	47.50	129.98
+PAM321	Interior Centrales	Beer Core	151.92	320.04
+PAM321	Interior Centrales	Beer Premium	14.78	35.08
+PAM321	Interior Centrales	NABs	48.47	134.81
+PAM331	Interior Oeste	Beer Core	419.01	619.2
+PAM331	Interior Oeste	Beer Premium	11.38	18.91
+PAM331	Interior Oeste	NABs	51.12	119.92
+PAM332	Interior Oeste	Beer Core	455.11	650.68
+PAM332	Interior Oeste	Beer Premium	9.69	22.91
+PAM332	Interior Oeste	NABs	47.68	101.34
+PAM333	Interior Oeste	Beer Core	430.71	620.93
+PAM333	Interior Oeste	Beer Premium	21.39	44.5
+PAM333	Interior Oeste	NABs	48.14	116.5
+PAM334	Interior Oeste	Beer Core	785.41	1859.94
+PAM334	Interior Oeste	Beer Premium	9.31	21.92
+PAM334	Interior Oeste	NABs	17.87	68.37
+PAM335	Interior Oeste	Beer Core	202.59	365.38
+PAM335	Interior Oeste	Beer Premium	7.36	17.43
+PAM335	Interior Oeste	NABs	44.78	102.08
+PAM336	Interior Oeste	Beer Core	275.90	542.37
+PAM336	Interior Oeste	Beer Premium	17.77	19.27
+PAM336	Interior Oeste	NABs	50.64	148.17
+PAM341	Interior Oeste	Beer Core	363.06	1224.73
+PAM341	Interior Oeste	Beer Premium	31.51	125.56
+PAM341	Interior Oeste	NABs	101.08	307.19
+PAM342	Interior Oeste	Beer Core	295.50	684.81
+PAM342	Interior Oeste	Beer Premium	7.80	26.64
+PAM342	Interior Oeste	NABs	72.55	184.73
+PAM351	Interior Oeste	Beer Core	792.30	2806.58
+PAM351	Interior Oeste	Beer Premium	227.01	728.83
+PAM351	Interior Oeste	NABs	171.97	790.53
+PAM352	Interior Oeste	Beer Core	128.06	296.02
+PAM352	Interior Oeste	Beer Premium	11.72	29.91
+PAM352	Interior Oeste	NABs	51.76	112.13
+PAM353	Interior Oeste	Beer Core	208.08	451.32
+PAM353	Interior Oeste	Beer Premium	7.13	27.08
+PAM353	Interior Oeste	NABs	52.17	110.04
+PAM354	Interior Oeste	Beer Core	105.77	265.97
+PAM354	Interior Oeste	Beer Premium	35.59	252.47
+PAM354	Interior Oeste	NABs	45.56	105.08
+PAM355	Interior Oeste	Beer Core	174.49	382.46
+PAM355	Interior Oeste	Beer Premium	9.30	44.71
+PAM355	Interior Oeste	NABs	26.06	91.64
+PAM357	Interior Oeste	Beer Core	146.57	379.86
+PAM357	Interior Oeste	Beer Premium	5.93	261.59
+PAM357	Interior Oeste	NABs	134.25	283.87
+PAM361	Interior Oeste	Beer Core	679.51	1697.44
+PAM361	Interior Oeste	Beer Premium	18.65	58.71
+PAM361	Interior Oeste	NABs	84.57	409.77
+PAM362	Interior Oeste	Beer Core	259.82	539.13
+PAM362	Interior Oeste	Beer Premium	28.43	36.38
+PAM362	Interior Oeste	NABs	63.75	198.17
+PAM363	Interior Oeste	Beer Core	194.07	351.01
+PAM363	Interior Oeste	Beer Premium	9.67	30.49
+PAM363	Interior Oeste	NABs	58.21	162.31
+PAM364	Interior Oeste	Beer Core	180.40	407.32
+PAM364	Interior Oeste	Beer Premium	6.93	21.28
+PAM364	Interior Oeste	NABs	54.07	144.73
+PAM371	Interior Oeste	Beer Core	486.23	1311.74
+PAM371	Interior Oeste	Beer Premium	86.64	139.96
+PAM371	Interior Oeste	NABs	125.58	372.73
+PAM372	Interior Oeste	Beer Core	257.25	569.39
+PAM372	Interior Oeste	Beer Premium	15.69	40.78
+PAM372	Interior Oeste	NABs	73.04	135.08
+PAM374	Interior Oeste	Beer Core	495.87	2807.01
+PAM374	Interior Oeste	Beer Premium	28.01	274.85
+PAM374	Interior Oeste	NABs	11.29	82.17
+PAM380	Interior Centrales	Beer Core	976.23	2421.24
+PAM380	Interior Centrales	Beer Premium	31.03	59.96
+PAM380	Interior Centrales	NABs	109.61	289.74
+PAM381	Interior Centrales	Beer Core	108.28	290.02
+PAM381	Interior Centrales	Beer Premium	8.25	15.01
+PAM381	Interior Centrales	NABs	42.14	214.88
+PAM382	Interior Centrales	Beer Core	356.61	875.01
+PAM382	Interior Centrales	Beer Premium	16.54	40.03
+PAM382	Interior Centrales	NABs	76.95	194.79
+PAM383	Interior Centrales	Beer Core	634.23	1359.97
+PAM383	Interior Centrales	Beer Premium	20.80	32.05
+PAM383	Interior Centrales	NABs	57.26	124.85
+PAM384	Interior Centrales	Beer Core	212.12	499.4
+PAM384	Interior Centrales	Beer Premium	7.53	21
+PAM384	Interior Centrales	NABs	43.02	169.97
+PAM385	Interior Centrales	Beer Core	183.54	479.92
+PAM385	Interior Centrales	Beer Premium	7.72	22.04
+PAM385	Interior Centrales	NABs	60.25	165.07
+PAM389	Interior Centrales	Beer Core	0.00	8.53
+PAM389	Interior Centrales	Beer Premium	0.00	0.4
+PAM389	Interior Centrales	NABs	0.00	0.63
+PAM4LZ	Interior Centrales	Beer Core	658.15	2852.12
+PAM4LZ	Interior Centrales	Beer Premium	13.77	212.89
+PAM4LZ	Interior Centrales	NABs	34.89	278.46
+PCI000	Cliente Interno	Beer Core	0.00	0
+PCI000	Cliente Interno	Beer Premium	0.00	0
+PCI000	Cliente Interno	NABs	0.00	0
