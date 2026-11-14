@@ -1,0 +1,26 @@
+
+WITH c AS (
+    SELECT regexp_replace(trim(CAST(customer_short_code AS STRING)), '^0+', '') AS cliente, sales_zone_code AS zv,
+           trim(CAST(sales_subregion_code AS STRING)) AS subregion,
+           ROW_NUMBER() OVER (PARTITION BY regexp_replace(trim(CAST(customer_short_code AS STRING)), '^0+', '')
+                              ORDER BY CASE WHEN customer_status = 'Active' THEN 0 ELSE 1 END,
+                                       customer_updated_at DESC, sales_organization_code DESC) AS rn
+    FROM brewdat_uc_delta_maz_prod.gld_maz_masterdata_sales.pa_customer
+    WHERE country_code = 'PA'
+),
+h AS (
+    SELECT trim(CAST(customer_group_code AS STRING)) AS k, region_name,
+           ROW_NUMBER() OVER (PARTITION BY trim(CAST(customer_group_code AS STRING)) ORDER BY region_name) AS rn
+    FROM brewdat_uc_maz_prod.slv_maz_masterdata_manual.pa_client_commercial_management_hierarchy
+),
+cli AS (
+    SELECT c.cliente, c.zv, COALESCE(h.region_name, CASE WHEN c.subregion = '90' THEN 'Cliente Interno' END) AS region
+    FROM c LEFT JOIN h ON h.k = c.subregion AND h.rn = 1
+    WHERE c.rn = 1
+)
+SELECT zv, COUNT(DISTINCT region) AS regiones, collect_set(region) AS cuales, COUNT(*) AS clientes
+FROM cli
+WHERE zv LIKE 'PAM%'
+GROUP BY zv
+HAVING COUNT(DISTINCT region) > 1
+ORDER BY zv;
