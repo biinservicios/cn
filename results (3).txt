@@ -1,4 +1,13 @@
+-- SQL SERVER: which Region the old DSR table gives these routes
+SELECT [Ruta], [Regi—n], COUNT(*) AS filas, SUM([MesMetaTotal]) AS meta
+FROM WarehousePanama.dbo.DSR_M_2018_Reloaded
+WHERE [KPI] = 'Hls'
+  AND [Ruta] IN ('PAM113','PAM116','PAM117','PAM118','PAM119','PAM124','PAM127','PAM132','PAM139','PAM191','PAM211','PAM238')
+GROUP BY [Ruta], [Regi—n]
+ORDER BY [Ruta], [Regi—n];
 
+
+-- DATABRICKS: per route and Region, how many customers and how much quota this month
 WITH c AS (
     SELECT regexp_replace(trim(CAST(customer_short_code AS STRING)), '^0+', '') AS cliente, sales_zone_code AS zv,
            trim(CAST(sales_subregion_code AS STRING)) AS subregion,
@@ -17,10 +26,15 @@ cli AS (
     SELECT c.cliente, c.zv, COALESCE(h.region_name, CASE WHEN c.subregion = '90' THEN 'Cliente Interno' END) AS region
     FROM c LEFT JOIN h ON h.k = c.subregion AND h.rn = 1
     WHERE c.rn = 1
+),
+q AS (
+    SELECT regexp_replace(trim(CAST(customer_code AS STRING)), '^0+', '') AS cliente, SUM(CAST(target_hl AS DOUBLE)) AS meta
+    FROM brewdat_uc_maz_prod.brz_maz_sales_manual.pa_sales_target_customer_material_current_month
+    WHERE CAST(reference_year AS INT) = year(current_date()) AND CAST(reference_month AS INT) = month(current_date())
+    GROUP BY 1
 )
-SELECT zv, COUNT(DISTINCT region) AS regiones, collect_set(region) AS cuales, COUNT(*) AS clientes
-FROM cli
-WHERE zv LIKE 'PAM%'
-GROUP BY zv
-HAVING COUNT(DISTINCT region) > 1
-ORDER BY zv;
+SELECT cli.zv, cli.region, COUNT(*) AS clientes, ROUND(SUM(COALESCE(q.meta, 0)), 2) AS meta
+FROM cli LEFT JOIN q ON q.cliente = cli.cliente
+WHERE cli.zv IN ('PAM113','PAM116','PAM117','PAM118','PAM119','PAM124','PAM127','PAM132','PAM139','PAM191','PAM211','PAM238')
+GROUP BY 1, 2
+ORDER BY 1, 2;
