@@ -1,278 +1,46 @@
-t	filas_pa	desde_mes_anterior	desde	hasta
-visit	1992138	80724	2022-07-29T00:00:00.000+00:00	2026-11-14T00:00:00.000+00:00
-task	8825709	433404	2022-08-01T00:00:00.000+00:00	2026-11-13T00:00:00.000+00:00
-
-
-region_name	commercial_management_name	filas
-Cliente Interno	Cliente Interno	11
-Interior Centrales	Chitre	1
-Interior Centrales	Chorrera Norte	1
-Interior Centrales	Chorrera Sur	1
-Interior Centrales	Penonome	1
-Interior Oeste	Bocas	1
-Interior Oeste	Chiriqui Este	1
-Interior Oeste	Chiriqui Oeste	1
-Interior Oeste	Santiago	1
-K.A	KAM 99	1
-K.A	KAM REY	1
-K.A	PGC	1
-Metro	Colón	1
-Metro	Darien	1
-Metro	Metro Centro	1
-Metro	Metro Este	1
-Metro	Metro Oeste	1
-ON VIP	ON Moderno	1
-ON VIP	ON Moderno NABs	1
-
-
-
-reference_year	reference_month	filas	cuota_hl
-2026	8	120233	142300.9093830335
-2026	11	122214	149199.99999998687
-2026	10	130721	149900.0000000018
-
-
-
-region	categoria	category_group	rutas	mes_hl	meta_hl	balboa_dorada_hl	balboa_dorada_meta
-Cliente Interno	Beer	Beer Core	2	9.20	0	0.00	0
-Cliente Interno	Beer	Beer Premium	2	2.73	0	0.00	0
-Cliente Interno	NABs	NABs	2	0.24	0	0.00	0
-Cliente Interno	Water - MP	Market Place	1	0.00	0	0.00	0
-Interior Centrales	null	null	17	1.07	0	0.00	0
-Interior Centrales	Azucar y Endulzantes	Market Place	21	257.22	0	0.00	0
-Interior Centrales	Beer	Beer Core	25	7771.36	23980.83	335.33	1805.59
-Interior Centrales	Beer	Beer Premium	25	917.36	1964.61	0.00	0
-Interior Centrales	Beer	Beer Value	7	1.45	3.57	0.00	0
-Interior Centrales	Energizante	Market Place	22	6.57	0	0.00	0
-Interior Centrales	Licores	Market Place	21	1.44	0	0.00	0
-Interior Centrales	Misceláneos	Market Place	11	0.01	0	0.00	0
-Interior Centrales	NABs	NABs	25	1418.09	5849	0.00	0
-Interior Centrales	Servicios	Market Place - Servicios	23	0.00	0	0.00	0
-Interior Centrales	Water - MP	Market Place	24	300.03	0	0.00	0
-Interior Oeste	null	null	10	0.73	0	0.00	0
-Interior Oeste	Azucar y Endulzantes	Market Place	18	29.72	0	0.00	0
-Interior Oeste	Beer	Beer Core	22	6331.52	18834.91	221.85	1089.74
-Interior Oeste	Beer	Beer Premium	22	595.82	2244.29	0.00	0
-Interior Oeste	Beer	Beer Value	7	0.00	169.8	0.00	0
-Interior Oeste	Energizante	Market Place	20	5.25	0	0.00	0
-Interior Oeste	Licores	Market Place	19	1.62	0	0.00	0
-Interior Oeste	Misceláneos	Market Place	12	0.02	0	0.00	0
-Interior Oeste	NABs	NABs	22	1136.66	4147	0.00	0
-Interior Oeste	Servicios	Market Place - Servicios	14	0.00	0	0.00	0
-Interior Oeste	Water - MP	Market Place	21	217.08	0	0.00	0
-K.A	Beer	Beer Core	13	5801.74	18193.45	229.26	766.91
-K.A	Beer	Beer Premium	13	965.63	2467.96	0.00	0
-K.A	Beer	Beer Value	12	188.80	1194.59	0.00	0
-K.A	Energizante	Market Place	13	67.51	0	0.00	0
-K.A	NABs	NABs	13	4042.66	12506	0.00	0
-K.A	Water - MP	Market Place	3	0.89	0	0.00	0
-Metro	null	null	12	0.43	0	0.00	0
-Metro	Azucar y Endulzantes	Market Place	21	205.07	0	0.00	0
-Metro	Beer	Beer Core	26	13548.73	39769.25	463.49	1909.77
-Metro	Beer	Beer Premium	26	1091.43	3560.04	0.00	0
-Metro	Beer	Beer Value	1	0.00	4.71	0.00	0
-Metro	Energizante	Market Place	22	15.61	0	0.00	0
-Metro	Licores	Market Place	22	1.96	0	0.00	0
-Metro	Misceláneos	Market Place	11	0.10	0	0.00	0
-Metro	NABs	NABs	26	2105.92	9187	0.00	0
-Metro	Servicios	Market Place - Servicios	21	0.00	0	0.00	0
-Metro	Water - MP	Market Place	24	200.06	0	0.00	0
-ON VIP	null	null	2	0.03	0	0.00	0
-ON VIP	Azucar y Endulzantes	Market Place	2	1.26	0	0.00	0
-ON VIP	Beer	Beer Core	6	744.41	2132.06	22.27	115.42
-ON VIP	Beer	Beer Premium	6	121.73	479.94	0.00	0
-ON VIP	Energizante	Market Place	6	12.36	0	0.00	0
-ON VIP	Licores	Market Place	3	0.08	0	0.00	0
-ON VIP	NABs	NABs	6	1079.49	2511	0.00	0
-ON VIP	Servicios	Market Place - Servicios	6	0.00	0	0.00	0
-ON VIP	Water - MP	Market Place	6	20.12	0	0.00	0
-
-
-
-region	categoria	category_group	rutas	mes_hl	meta_hl	balboa_dorada_hl	balboa_dorada_meta
-Cliente Interno	Beer	Beer Core	2	9.20	0	0.00	0
-Cliente Interno	Beer	Beer Premium	2	2.73	0	0.00	0
-Cliente Interno	NABs	NABs	2	0.24	0	0.00	0
-Cliente Interno	Water - MP	Market Place	1	0.00	0	0.00	0
-Interior Centrales	null	null	17	1.07	0	0.00	0
-Interior Centrales	Azucar y Endulzantes	Market Place	21	257.22	0	0.00	0
-Interior Centrales	Beer	Beer Core	25	7771.36	23980.83	335.33	1805.59
-Interior Centrales	Beer	Beer Premium	25	917.36	1964.61	0.00	0
-Interior Centrales	Beer	Beer Value	7	1.45	3.57	0.00	0
-Interior Centrales	Energizante	Market Place	22	6.57	0	0.00	0
-Interior Centrales	Licores	Market Place	21	1.44	0	0.00	0
-Interior Centrales	Misceláneos	Market Place	11	0.01	0	0.00	0
-Interior Centrales	NABs	NABs	25	1418.09	5849	0.00	0
-Interior Centrales	Servicios	Market Place - Servicios	23	0.00	0	0.00	0
-Interior Centrales	Water - MP	Market Place	24	300.03	0	0.00	0
-Interior Oeste	null	null	10	0.73	0	0.00	0
-Interior Oeste	Azucar y Endulzantes	Market Place	18	29.72	0	0.00	0
-Interior Oeste	Beer	Beer Core	22	6331.52	18834.91	221.85	1089.74
-Interior Oeste	Beer	Beer Premium	22	595.82	2244.29	0.00	0
-Interior Oeste	Beer	Beer Value	7	0.00	169.8	0.00	0
-Interior Oeste	Energizante	Market Place	20	5.25	0	0.00	0
-Interior Oeste	Licores	Market Place	19	1.62	0	0.00	0
-Interior Oeste	Misceláneos	Market Place	12	0.02	0	0.00	0
-Interior Oeste	NABs	NABs	22	1136.66	4147	0.00	0
-Interior Oeste	Servicios	Market Place - Servicios	14	0.00	0	0.00	0
-Interior Oeste	Water - MP	Market Place	21	217.08	0	0.00	0
-K.A	Beer	Beer Core	13	5801.74	18193.45	229.26	766.91
-K.A	Beer	Beer Premium	13	965.63	2467.96	0.00	0
-K.A	Beer	Beer Value	12	188.80	1194.59	0.00	0
-K.A	Energizante	Market Place	13	67.51	0	0.00	0
-K.A	NABs	NABs	13	4042.66	12506	0.00	0
-K.A	Water - MP	Market Place	3	0.89	0	0.00	0
-Metro	null	null	12	0.43	0	0.00	0
-Metro	Azucar y Endulzantes	Market Place	21	205.07	0	0.00	0
-Metro	Beer	Beer Core	26	13548.73	39769.25	463.49	1909.77
-Metro	Beer	Beer Premium	26	1091.43	3560.04	0.00	0
-Metro	Beer	Beer Value	1	0.00	4.71	0.00	0
-Metro	Energizante	Market Place	22	15.61	0	0.00	0
-Metro	Licores	Market Place	22	1.96	0	0.00	0
-Metro	Misceláneos	Market Place	11	0.10	0	0.00	0
-Metro	NABs	NABs	26	2105.92	9187	0.00	0
-Metro	Servicios	Market Place - Servicios	21	0.00	0	0.00	0
-Metro	Water - MP	Market Place	24	200.06	0	0.00	0
-ON VIP	null	null	2	0.03	0	0.00	0
-ON VIP	Azucar y Endulzantes	Market Place	2	1.26	0	0.00	0
-ON VIP	Beer	Beer Core	6	744.41	2132.06	22.27	115.42
-ON VIP	Beer	Beer Premium	6	121.73	479.94	0.00	0
-ON VIP	Energizante	Market Place	6	12.36	0	0.00	0
-ON VIP	Licores	Market Place	3	0.08	0	0.00	0
-ON VIP	NABs	NABs	6	1079.49	2511	0.00	0
-ON VIP	Servicios	Market Place - Servicios	6	0.00	0	0.00	0
-ON VIP	Water - MP	Market Place	6	20.12	0	0.00	0
-
-
-
-Ruta	Dirección	Región	Gerencia	Canal	Categoria	Brand-Local	Capacity	Material	Pack Group	SKU-Local Name	Dia	DiaLY	MesLY	Mes	YTD	YTDLY	MesMeta	MesMetaTotal	DiaMeta	Centro	Category Group	Televendedor	TD Month LY Current	TD Month LY	TD Month Current	TD Month	KPI	Pedidos	NTODia	NTODiaLY	NTOMesLY	NTOMes	NTOYTD	NTOYTDLY	NTOMesMeta	NTOMesMetaTotal	NTODiaMeta	xDia	xDíaLY	Cumplimiento Proyectado	Falta para Meta	xDía para lograr meta
-PAM152	Tradicional	Interior Oeste	Chiriqui Este	Off Tradicional	Beer	Atlas Golden	Bot 285cc	22055	BOT	ATLAS GOLDEN X24 RGB 285ML 	0	0	0	0	0	2.2572	0	0	0	DC Chiriquí	Beer Core	NULL	8	21	8	21	Hls	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-PAM152	Tradicional	Interior Oeste	Chiriqui Este	Off Tradicional	Beer	Atlas Golden	Lata 12 oz355cc	22056	LAT	ATLAS GOLDEN 6X24 CAN 355ML	0	0	0	0	0	1.4484	0	0	0	DC Chiriquí	Beer Core	NULL	8	21	8	21	Hls	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-PAM152	Tradicional	Interior Oeste	Chiriqui Este	Off Tradicional	Beer	Atlas Golden Light	Bot 285cc	7007	BOT	ATLAS GOLDEN LIGHT 285ML RB X24	0	0	0	0	0	0.2736	0	0	0	DC Chiriquí	Beer Core	NULL	8	21	8	21	Hls	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-PAM152	Tradicional	Interior Oeste	Chiriqui Este	Off Tradicional	Beer	Corona Extra	Bot. 330cc	20449	BOT	CORONA NRB 330ML SW6 X24	0	0	0	0	0	4.2768	0	0	0	DC Chiriquí	Beer Premium	NULL	8	21	8	21	Hls	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-PAM152	Tradicional	Interior Oeste	Chiriqui Este	Off Tradicional	Comestibles	Trululu	Pack 26.07	21535	Pack	TRULULU SPLASH 1X50	0	0	0	0	0	0.3952	0	0	0	DC Chiriquí	Market Place	NULL	8	21	8	21	Hls	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
-
-
-
-Región	Categoria	Category Group	rutas	mes_hl	meta_hl
-NULL	NULL	NULL	0	0	0
-NULL	Beer	Beer Core	0	0	0
-NULL	Beer	Beer Premium	0	0	0
-Cliente Interno	NULL	NULL	2	0	0
-Cliente Interno	Beer	Beer Core	1	9.2016	0
-Cliente Interno	Beer	Beer Premium	1	2.7264	0
-Cliente Interno	CSD	NABs	1	0	0
-Cliente Interno	Energizante	Market Place	1	0	0
-Cliente Interno	Licores	Market Place	1	0	0
-Cliente Interno	Malt	NABs	1	0.24	0
-Cliente Interno	Servicios	Market Place - Servicios	2	0	0
-Cliente Interno	Water - MP	Market Place	1	0	0
-Interior Centrales	Atún	Market Place	3	0	0
-Interior Centrales	Azucar y Endulzantes	Market Place	25	273.810849	0
-Interior Centrales	Beer	Beer Core	26	8534.5911	23981.54
-Interior Centrales	Beer	Beer Premium	25	975.69975	1963.894
-Interior Centrales	Beer	Beer Value	19	1.4484	3.566
-Interior Centrales	Cigarrillos	Market Place	3	0	0
-Interior Centrales	Comestibles	Market Place	25	0	0
-Interior Centrales	CSD	NABs	25	743.6186	2483.716
-Interior Centrales	Cuidado Personal	Market Place	24	0	0
-Interior Centrales	Despensa	Market Place	7	0	0
-Interior Centrales	Energizante	Market Place	25	9.7532	0
-Interior Centrales	Harina	Market Place	11	0	0
-Interior Centrales	Jugos	Market Place	24	0	0
-Interior Centrales	Licores	Market Place	25	2.5895	0
-Interior Centrales	Malt	NABs	26	821.4018	3365.284
-Interior Centrales	Misceláneos	Market Place	25	0.01041	0
-Interior Centrales	Salsas	Market Place	15	0	0
-Interior Centrales	Servicios	Market Place - Servicios	25	0	0
-Interior Centrales	Water - MP	Market Place	25	319.2559	0
-Interior Oeste	Atún	Market Place	16	0	0
-Interior Oeste	Azucar y Endulzantes	Market Place	22	46.4109641	0
-Interior Oeste	Beer	Beer Core	22	6631.09074	18835.156
-Interior Oeste	Beer	Beer Premium	22	616.24085	2244.046
-Interior Oeste	Beer	Beer Value	13	0	169.798
-Interior Oeste	Cigarrillos	Market Place	2	0	0
-Interior Oeste	Comestibles	Market Place	22	0	0
-Interior Oeste	CSD	NABs	22	523.9062	1574.312
-Interior Oeste	Cuidado Personal	Market Place	22	0	0
-Interior Oeste	Despensa	Market Place	11	0	0
-Interior Oeste	Energizante	Market Place	22	5.4628	0
-Interior Oeste	Harina	Market Place	10	0	0
-Interior Oeste	Jugos	Market Place	22	0	0
-Interior Oeste	Licores	Market Place	22	2.5605	0
-Interior Oeste	Malt	NABs	22	758.56995	2572.688
-Interior Oeste	Misceláneos	Market Place	22	0.02119	0
-Interior Oeste	Salsas	Market Place	3	0	0
-Interior Oeste	Servicios	Market Place - Servicios	22	0	0
-Interior Oeste	Water - MP	Market Place	22	233.3407	0
-K.A	Azucar y Endulzantes	Market Place	2	0	0
-K.A	Beer	Beer Core	13	6476.691	18193.355
-K.A	Beer	Beer Premium	13	1177.37255	2468.059
-K.A	Beer	Beer Value	12	249.2952	1194.586
-K.A	CSD	NABs	13	2568.6969	7043.353
-K.A	Energizante	Market Place	13	71.3831	0
-K.A	Harina	Market Place	1	0	0
-K.A	Licores	Market Place	2	0	0
-K.A	Malt	NABs	13	2023.30425	5462.647
-K.A	Misceláneos	Market Place	2	0	0
-K.A	Servicios	Market Place - Servicios	2	0	0
-K.A	Water	NABs	1	0	0
-K.A	Water - MP	Market Place	8	0.894	0
-Metro	Atún	Market Place	1	0	0
-Metro	Azucar y Endulzantes	Market Place	25	271.0933721	0
-Metro	Beer	Beer Core	27	14470.87168	39769.399
-Metro	Beer	Beer Premium	27	1210.3345	3559.887
-Metro	Beer	Beer Value	5	0	4.714
-Metro	Comestibles	Market Place	25	0	0
-Metro	CSD	NABs	27	1239.1022	4795.19
-Metro	Cuidado Personal	Market Place	23	0	0
-Metro	Despensa	Market Place	18	0	0
-Metro	Energizante	Market Place	26	19.4472	0
-Metro	Harina	Market Place	11	0	0
-Metro	Jugos	Market Place	25	0	0
-Metro	Licores	Market Place	26	2.548	0
-Metro	Malt	NABs	27	1052.3814	4391.81
-Metro	Misceláneos	Market Place	26	0.111113	0
-Metro	Salsas	Market Place	11	0	0
-Metro	Servicios	Market Place - Servicios	25	0	0
-Metro	Water - MP	Market Place	26	219.377	0
-ON VIP	Azucar y Endulzantes	Market Place	6	1.258	0
-ON VIP	Beer	Beer Core	6	837.72371	2131.978
-ON VIP	Beer	Beer Premium	6	149.2728	480.022
-ON VIP	Comestibles	Market Place	4	0	0
-ON VIP	CSD	NABs	6	1116.6116	2501.996
-ON VIP	Energizante	Market Place	6	13.4756	0
-ON VIP	Harina	Market Place	1	0	0
-ON VIP	Jugos	Market Place	1	0	0
-ON VIP	Licores	Market Place	6	0.103	0
-ON VIP	Malt	NABs	6	2.2884	9.004
-ON VIP	Misceláneos	Market Place	6	0	0
-ON VIP	Salsas	Market Place	1	0	0
-ON VIP	Servicios	Market Place - Servicios	6	0	0
-ON VIP	Water - MP	Market Place	6	23.292	0
-
-
-
-Región	rutas	mes_hl	meta_hl
-Cliente Interno	1	0	0
-Interior Centrales	24	353.76065	1805.375
-Interior Oeste	21	242.3857	1089.919
-K.A	13	257.6151	766.882
-Metro	26	504.4801	1909.987
-ON VIP	6	24.0804	115.446
+Ruta	Región	filas	meta
+PAM113	Metro	501	1005.89
+PAM116	ON VIP	346	795.035
+PAM117	ON VIP	854	679.858
+PAM118	ON VIP	352	541.888
+PAM119	ON VIP	324	255.97
+PAM124	ON VIP	671	1267.001
+PAM127	ON VIP	555	1583.248
+PAM132	Metro	70	4.647
+PAM139	Metro	316	1316.978
+PAM191	Metro	474	5931.009
+PAM211	Cliente Interno	170	0
+PAM211	Interior Centrales	6	0
+PAM211	Metro	38	0
 
 
 
 
-Calendar Month	Material	Customer Code	GSI	NTO	Desc_Trade	Desc_Precio	Desc_Total	Sales Volume (HL) - BIL	HL_Trade	HL_BTL_TOTAL	Desc_Rewards	HL_Rewards	Desc_NCr
-2026.10	22781	14304994	363.6	290.04	18.18	0	18.18	1.704	0	0	0	0	0
-2026.10	7677	11080573	33.5	32.49	1.01	0	1.01	0.213	0	0	0	0	0
-2026.10	17213	14224761	28.32	23.1016	2.27	0	2.27	0.1008	0	0	0	0	0
-2026.10	22741	11075570	6	6	0	0	0	0.006	0	0	0	0	0
-2026.10	21045	11076075	34.16	27.329688	1.37	0	1.37	0.22704	0	0	0	0	0
-
-
-
-filas	clientes	hl
-113259	10828	148906.851020598
-
+zv	region	clientes	meta
+PAM113	Cliente Interno	1	0
+PAM113	Metro	558	1005.64
+PAM116	K.A	431	0
+PAM116	ON VIP	376	794.94
+PAM117	K.A	22	0
+PAM117	ON VIP	409	679.93
+PAM118	K.A	3	0
+PAM118	ON VIP	393	541.85
+PAM119	K.A	81	0
+PAM119	ON VIP	746	255.99
+PAM124	K.A	1	0
+PAM124	ON VIP	266	1267.06
+PAM127	K.A	1282	0
+PAM127	ON VIP	530	1583.23
+PAM132	Cliente Interno	1	0
+PAM132	Metro	982	4.64
+PAM139	Cliente Interno	1	0
+PAM139	Metro	415	1317.16
+PAM191	Cliente Interno	1	0
+PAM191	Metro	1324	5931.43
+PAM211	null	1	0
+PAM211	Cliente Interno	387	0
+PAM211	Interior Centrales	272	0
+PAM211	Interior Oeste	2	0
+PAM211	Metro	1662	0
+PAM238	Cliente Interno	1	0
+PAM238	Metro	1	0
