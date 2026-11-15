@@ -1,24 +1,20 @@
-WITH c AS (
-    SELECT regexp_replace(trim(CAST(customer_short_code AS STRING)), '^0+', '') AS cliente, sales_zone_code AS zv, customer_name, customer_status,
-           ROW_NUMBER() OVER (PARTITION BY regexp_replace(trim(CAST(customer_short_code AS STRING)), '^0+', '')
-                              ORDER BY CASE WHEN customer_status = 'Active' THEN 0 ELSE 1 END,
-                                       customer_updated_at DESC, sales_organization_code DESC) AS rn
-    FROM brewdat_uc_delta_maz_prod.gld_maz_masterdata_sales.pa_customer
-    WHERE country_code = 'PA'
-),
-q AS (
-    SELECT regexp_replace(trim(CAST(customer_code AS STRING)), '^0+', '') AS cliente, ROUND(SUM(CAST(target_hl AS DOUBLE)), 2) AS meta
-    FROM brewdat_uc_maz_prod.brz_maz_sales_manual.pa_sales_target_customer_material_current_month
-    WHERE CAST(reference_year AS INT) = year(current_date()) AND CAST(reference_month AS INT) = month(current_date())
-    GROUP BY 1
-)
-SELECT c.zv, c.cliente, c.customer_name, c.customer_status, q.meta
-FROM c JOIN q ON q.cliente = c.cliente
-WHERE c.rn = 1 AND c.zv IN ('PAM147', 'PAM148', 'PAM152', 'PAM389')
-ORDER BY c.zv, q.meta DESC;
+cd "C:\MAZ_Command Center PA"
+git fetch origin
+git worktree add -b pbi/compensacion-variable "C:\MAZ_Command Center PA - compensacion-variable" origin/main
 
+2. Copy the files into C:\MAZ_Command Center PA - compensacion-variable\BrewDat Prod MAZ Panama\Comercial\:
 
+pbi_pa_comercial_compensacion_variable_dbx.pbip
+pbi_pa_comercial_compensacion_variable_dbx.Report (with the Ruta filter saved)
+pbi_pa_comercial_compensacion_variable_dbx.SemanticModel
 
-SELECT [Cliente], [ZV], [Nombre 3], [Estatus]
-FROM WarehousePanama.dbo.SQVI
-WHERE [Cliente] IN ('<paste the customer numbers here, comma separated>');
+Don’t copy LEEME.txt, and don’t copy any .pbi folders.
+
+3. Check, commit and push:
+
+powershell
+cd "C:\MAZ_Command Center PA - compensacion-variable"
+git status
+git add -A
+git commit -m "pbi_pa_comercial_compensacion_variable_dbx: Compensacion Variable sin SQL Server (Databricks), filtro de rutas sin meta (PAM147, PAM148, PAM152, PAM389)"
+git push -u origin pbi/compensacion-variable
