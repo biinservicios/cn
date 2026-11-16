@@ -1,7 +1,38 @@
--- D5. pa_invoice HL by invoice day, this month
-SELECT invoice_date, ROUND(SUM(total_volume), 2) AS hl, COUNT(*) AS lineas
-FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
-WHERE invoice_date >= trunc(current_date(), 'MM')
-  AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
-GROUP BY 1
-ORDER BY 1;
+function Renombrar-Reporte {
+    param([string]$Wt, [string]$Viejo, [string]$Nuevo, [string]$Area, [string]$Origen = "Command Center")
+    $Utf8 = New-Object System.Text.UTF8Encoding($false)
+    $Base = Join-Path $Wt "BrewDat Prod MAZ Panama"
+    $Src  = Join-Path $Base $Origen
+    $Dst  = Join-Path $Base $Area
+    function Editar($ruta, $patron, $reemplazo) {
+        $t = [IO.File]::ReadAllText($ruta)
+        $n = [regex]::Replace($t, $patron, $reemplazo)
+        if ($n -eq $t) { throw "Nothing changed in ${ruta} (pattern: $patron)" }
+        [IO.File]::WriteAllText($ruta, $n, $Utf8)
+    }
+    Set-Location -LiteralPath $Wt
+    if (-not (Test-Path -LiteralPath $Dst)) { New-Item -ItemType Directory -Path $Dst | Out-Null }
+
+    # 1) move + rename the 3 items (git mv keeps the history)
+    git mv "$Src\$Viejo.pbip"          "$Dst\$Nuevo.pbip"
+    git mv "$Src\$Viejo.Report"        "$Dst\$Nuevo.Report"
+    git mv "$Src\$Viejo.SemanticModel" "$Dst\$Nuevo.SemanticModel"
+
+    # 2) fix the references between them
+    Editar "$Dst\$Nuevo.pbip"                     ([regex]::Escape("$Viejo.Report"))           "$Nuevo.Report"
+    Editar "$Dst\$Nuevo.Report\definition.pbir"  ([regex]::Escape("../$Viejo.SemanticModel")) "../$Nuevo.SemanticModel"
+
+    # 3) name shown in Fabric (semantic model and report)
+    Editar "$Dst\$Nuevo.SemanticModel\.platform" '"displayName"\s*:\s*"[^"]*"' ('"displayName": "' + $Nuevo + '"')
+    Editar "$Dst\$Nuevo.Report\.platform"        '"displayName"\s*:\s*"[^"]*"' ('"displayName": "' + $Nuevo + '"')
+
+    # 4) commit + push to the SAME branch (the open PR updates)
+    git add -A
+    git status
+    git commit -m "Renombrar a nomenclatura pbi_pa_{area}_{reporte}: $Nuevo (carpeta $Area)"
+    git push
+}
+
+Renombrar-Reporte -Wt "C:\MAZ_Command Center PA - saldos"         -Viejo "Saldos_DBX"        -Nuevo "pbi_pa_finanzas_saldos_dbx"        -Area "Finanzas"
+Renombrar-Reporte -Wt "C:\MAZ_Command Center PA - venta-externa" -Viejo "Venta_Externa_DBX" -Nuevo "pbi_pa_finanzas_venta_externa_dbx" -Area "Finanzas"
+Renombrar-Reporte -Wt "C:\MAZ_Command Center PA - cero-fallos"   -Viejo "Cero_Fallos_DBX"   -Nuevo "pbi_pa_comercial_cero_fallos_dbx"  -Area "Comercial"
