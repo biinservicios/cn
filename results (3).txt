@@ -1,38 +1,25 @@
-function Renombrar-Reporte {
-    param([string]$Wt, [string]$Viejo, [string]$Nuevo, [string]$Area, [string]$Origen = "Command Center")
-    $Utf8 = New-Object System.Text.UTF8Encoding($false)
-    $Base = Join-Path $Wt "BrewDat Prod MAZ Panama"
-    $Src  = Join-Path $Base $Origen
-    $Dst  = Join-Path $Base $Area
-    function Editar($ruta, $patron, $reemplazo) {
-        $t = [IO.File]::ReadAllText($ruta)
-        $n = [regex]::Replace($t, $patron, $reemplazo)
-        if ($n -eq $t) { throw "Nothing changed in ${ruta} (pattern: $patron)" }
-        [IO.File]::WriteAllText($ruta, $n, $Utf8)
-    }
-    Set-Location -LiteralPath $Wt
-    if (-not (Test-Path -LiteralPath $Dst)) { New-Item -ItemType Directory -Path $Dst | Out-Null }
-
-    # 1) move + rename the 3 items (git mv keeps the history)
-    git mv "$Src\$Viejo.pbip"          "$Dst\$Nuevo.pbip"
-    git mv "$Src\$Viejo.Report"        "$Dst\$Nuevo.Report"
-    git mv "$Src\$Viejo.SemanticModel" "$Dst\$Nuevo.SemanticModel"
-
-    # 2) fix the references between them
-    Editar "$Dst\$Nuevo.pbip"                     ([regex]::Escape("$Viejo.Report"))           "$Nuevo.Report"
-    Editar "$Dst\$Nuevo.Report\definition.pbir"  ([regex]::Escape("../$Viejo.SemanticModel")) "../$Nuevo.SemanticModel"
-
-    # 3) name shown in Fabric (semantic model and report)
-    Editar "$Dst\$Nuevo.SemanticModel\.platform" '"displayName"\s*:\s*"[^"]*"' ('"displayName": "' + $Nuevo + '"')
-    Editar "$Dst\$Nuevo.Report\.platform"        '"displayName"\s*:\s*"[^"]*"' ('"displayName": "' + $Nuevo + '"')
-
-    # 4) commit + push to the SAME branch (the open PR updates)
-    git add -A
-    git status
-    git commit -m "Renombrar a nomenclatura pbi_pa_{area}_{reporte}: $Nuevo (carpeta $Area)"
-    git push
-}
-
-Renombrar-Reporte -Wt "C:\MAZ_Command Center PA - saldos"         -Viejo "Saldos_DBX"        -Nuevo "pbi_pa_finanzas_saldos_dbx"        -Area "Finanzas"
-Renombrar-Reporte -Wt "C:\MAZ_Command Center PA - venta-externa" -Viejo "Venta_Externa_DBX" -Nuevo "pbi_pa_finanzas_venta_externa_dbx" -Area "Finanzas"
-Renombrar-Reporte -Wt "C:\MAZ_Command Center PA - cero-fallos"   -Viejo "Cero_Fallos_DBX"   -Nuevo "pbi_pa_bees_cero_fallos_dbx"       -Area "BEES"
+-- RB4. Red Bull lines on S624100ZT0, Jan-Jun 2025: are they in pa_invoice, and with how much HL?
+WITH g AS (
+    SELECT DISTINCT refdocnr AS factura, regexp_replace(matnr, '^0+', '') AS material,
+           date_format(budat, 'yyyy-MM') AS mes, fkart
+    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
+    WHERE __partition_column BETWEEN '202501' AND '202506'
+      AND rbukrs = 'DC00' AND racct = 'S624100ZT0'
+      AND budat BETWEEN '2025-01-01' AND '2025-06-30'
+),
+i AS (
+    SELECT regexp_replace(trim(CAST(invoice_number AS STRING)), '^0+', '') AS factura,
+           regexp_replace(trim(CAST(product_short_code AS STRING)), '^0+', '') AS material,
+           COUNT(*) AS lineas, SUM(total_volume) AS hl
+    FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
+    WHERE invoice_date BETWEEN '2024-12-01' AND '2025-07-31'
+      AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
+    GROUP BY 1, 2
+)
+SELECT g.mes, g.fkart AS tipo_factura,
+       COUNT(*) AS lineas_cuenta,
+       SUM(CASE WHEN i.factura IS NOT NULL THEN 1 ELSE 0 END) AS estan_en_pa_invoice,
+       ROUND(SUM(COALESCE(i.hl, 0)), 2) AS hl_en_pa_invoice
+FROM g LEFT JOIN i ON i.factura = g.factura AND i.material = g.material
+GROUP BY 1, 2
+ORDER BY 1, 2;
