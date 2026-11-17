@@ -1,69 +1,9 @@
--- =====================================================================================
--- pa_invoice - Red Bull free goods: is the team's gap = account S624100ZT0? (v2)
--- Databricks, Panama warehouse (brewdat-maz-sales-pa-adb-ep01-p). Run one at a time and paste me the 3 results.
--- GLPCA / VBRP filtered by __partition_column (GLPCA = yyyymm, VBRP = yyyymmdd).
--- Red Bull = the team's 8 SKUs + the 2 minor ones (21843, 21442).
--- =====================================================================================
- 
- 
--- RB1. The 7 invoices of the team's report (29-oct-2026, material 21440): which GL account each line posts to
-SELECT g.refdocnr AS factura, g.posnr, g.racct AS cuenta, g.fkart, g.drcrk, g.budat,
-       regexp_replace(g.matnr, '^0+', '') AS material, trim(p.vkaus) AS uso,
-       ROUND(COALESCE(p.volum, 0) / 100000, 4) AS hl_vbrp, g.hsl AS monto
-FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca g
-LEFT JOIN brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp p
-       ON p.vbeln = g.refdocnr AND p.posnr = g.posnr AND p.__partition_column BETWEEN '20261001' AND '20261031'
-WHERE g.__partition_column = '202610'
-  AND g.rbukrs = 'DC00'
-  AND g.refdocnr IN ('2695529032','2695529080','2695529346','2695529399','2695529454','2695529455','2695529595')
-ORDER BY g.refdocnr, g.posnr, g.racct;
- 
- 
--- RB2. Red Bull lines of invoice types ZNO1 / ZNOB / ZNS6 / ZNO5 by month, ACCOUNT and invoice type, Jan-2025 to Oct-2026
---      Shows which account they post to, and whether S624100ZT0 starts in May / June 2025 (when the team's gap starts).
-WITH g AS (
-    SELECT refdocnr, posnr, budat, drcrk, racct, fkart
-    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
-    WHERE __partition_column BETWEEN '202501' AND '202610'
-      AND rbukrs = 'DC00'
-      AND budat BETWEEN '2025-01-01' AND '2026-10-31'
-      AND fkart IN ('ZNO1', 'ZNOB', 'ZNS6', 'ZNO5')
-      AND regexp_replace(matnr, '^0+', '') IN ('21440','21436','21829','21445','22724','21265','21441','23343','21843','21442')
-),
-p AS (
-    SELECT vbeln, posnr, volum
-    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
-    WHERE __partition_column BETWEEN '20241115' AND '20261115'
-      AND vbeln IN (SELECT refdocnr FROM g)
-)
-SELECT date_format(g.budat, 'yyyy-MM') AS mes, g.racct AS cuenta, g.fkart AS tipo_factura,
-       COUNT(*) AS lineas,
-       ROUND(SUM(COALESCE(p.volum, 0) * CASE WHEN g.drcrk = 'H' THEN -1 ELSE 1 END) / 100000, 2) AS hl
-FROM g LEFT JOIN p ON p.vbeln = g.refdocnr AND p.posnr = g.posnr
-GROUP BY 1, 2, 3
-ORDER BY 1, 2, 3;
- 
- 
--- RB3. Account S624100ZT0 by month: Red Bull vs everything else (is it ONLY Red Bull?)
-WITH g AS (
-    SELECT refdocnr, posnr, budat, drcrk, matnr
-    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
-    WHERE __partition_column BETWEEN '202501' AND '202610'
-      AND rbukrs = 'DC00' AND racct = 'S624100ZT0'
-      AND budat BETWEEN '2025-01-01' AND '2026-10-31'
-),
-p AS (
-    SELECT vbeln, posnr, volum
-    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
-    WHERE __partition_column BETWEEN '20241115' AND '20261115'
-      AND vbeln IN (SELECT refdocnr FROM g)
-)
-SELECT date_format(g.budat, 'yyyy-MM') AS mes,
-       CASE WHEN regexp_replace(g.matnr, '^0+', '') IN ('21440','21436','21829','21445','22724','21265','21441','23343','21843','21442')
-            THEN 'Red Bull' ELSE 'Otro' END AS grupo,
-       COUNT(*) AS lineas,
-       ROUND(SUM(COALESCE(p.volum, 0) * CASE WHEN g.drcrk = 'H' THEN -1 ELSE 1 END) / 100000, 2) AS hl
-FROM g LEFT JOIN p ON p.vbeln = g.refdocnr AND p.posnr = g.posnr
-GROUP BY 1, 2
-ORDER BY 1, 2;
- 
+-- Who writes pa_invoice: the notebook path and job of the last loads
+SELECT version, timestamp, operation, userName,
+       notebook.notebookId AS notebook_id, job.jobId AS job_id, job.jobName AS job_name,
+       clusterId
+FROM (DESCRIBE HISTORY brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice LIMIT 10);
+
+
+
+ DESCRIBE HISTORY brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice LIMIT 10;
