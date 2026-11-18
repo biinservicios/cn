@@ -24,4 +24,45 @@ FROM g LEFT JOIN i ON i.factura = g.factura AND i.material = g.material
 GROUP BY 1, 2
 ORDER BY 1, 2;
 
-Gracias por el flujo. Una duda antes de registrar el requerimiento: pa_invoice no está en brewtiful; la carga el ADF brewdat-maz-maz-sales-sellin-adf, ligado al repo BrewDat/brewdat-maz-maz-sales-sellin-repo-adf (rama develop), al que no tengo acceso. ¿El cambio (agregar una cuenta contable) se hace en ese repo siguiendo este mismo flujo
+1. Governance requirement (to get the ID)
+
+I haven’t seen the form, so adapt this to its fields:
+
+Título: pa_invoice – incluir volumen de la cuenta S624100ZT0 (Red Bull sin cargo)
+
+Tipo: Cambio a objeto existente (sin tablas ni columnas nuevas)
+
+Objeto: brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
+
+Descripción: Las líneas de Red Bull sin cargo (facturas ZNOB / ZNO1 y devoluciones ZNS6) contabilizan en la cuenta S624100ZT0. pa_invoice trae esas líneas con volumen 0 porque el código no toma el volumen de esa cuenta. Se solicita agregar la cuenta a la transformación.
+
+Impacto: Brecha de volumen contra el cierre oficial de 451 HL entre junio 2025 y octubre 2026 (entre 7 y 57 HL por mes). No afecta GSI ni NTO.
+
+Alcance: Un cambio en el notebook de pa_invoice (dominio sell-in, ADF brewdat-maz-maz-sales-sellin-adf) y re-ejecución desde junio 2025.
+
+Dominio / subdominio: Sales / Sell-in
+
+Validación: Comparación mensual de HL contra el cierre oficial, antes y después del cambio.
+
+2. Operations ticket (access)
+
+Título: Acceso a repos y recursos del dominio MAZ Sales Sell-in (ADF y ADB)
+
+Usuario: PA814637@gmodelo.com.mx (GitHub: pa814637)
+
+Solicito acceso a:
+
+Repo de GitHub BrewDat/brewdat-maz-maz-sales-sellin-repo-adf (rama develop).
+Repo de GitHub de los notebooks de Databricks del dominio sell-in (ADB).
+Azure Data Factory brewdat-maz-maz-sales-sellin-adf-d (Studio, lectura y desarrollo).
+Workspace de Databricks de desarrollo del dominio sell-in.
+
+Motivo: Ajuste a la transformación de pa_invoice (requerimiento de Data Governance ID: ______).
+
+Register the requirement first so you can put its ID in the ticket.
+
+One thing worth asking Miguel, since he clearly knows the setup: the name of the ADB repo and the path of the pa_invoice notebook. With that the ticket is exact, and once access arrives you can go straight to the file:
+
+Listo, creo el requerimiento y el ticket. ¿Me confirmas el nombre del repo de ADB y la ruta del notebook de pa_invoice, para pedir el acceso exacto?
+
+If the form has fields this text doesn’t cover, send me a screenshot and I’ll fill them in.
