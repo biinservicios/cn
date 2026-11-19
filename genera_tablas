@@ -1,0 +1,819 @@
+-- ============================================================================
+-- SQL Translation: Genera_Tablas_diarias_por_Gerenciav12_Nuevo_Nuevo_DIFF
+-- For execution in Pentaho on SQL Server (WarehousePanama)
+-- Output tables suffixed with _2 for testing (GAPs → GAPs_22)
+-- ============================================================================
+-- VERSION 3 CHANGES:
+--   Step 1: Cuota_Clientes + Esqueleto_2Mo + Esqueleto_YTD UNIONed as streams
+--           4/5/6 (matching Alteryx Tool 234 → Tool 7) so all combos flow
+--           through SQVI/Materiales joins naturally
+--   Step 4: stg_gd_cuota_agg removed. Esqueleto still created for GAPs Step 6.
+--   Step 6: Simplified - no separate cuota-only UNION needed (6b/6c removed)
+-- ============================================================================
+-- PARAMETERS (update each month):
+--   Current month: '2026.03'
+--   Last year month: '2025.03'
+--   Last day: '2026-03-31'
+--   TD table: TD_03_2026
+--   Esqueleto 2Mo filter: '2026.01' or '2026.02'
+--   Esqueleto YTD filter: '2025.01' or '2025.02'
+--   HistoricosPanama LM table: 2026_02_D
+-- ============================================================================
+
+-- CLEANUP OUTPUT TABLES
+IF OBJECT_ID('dbo.[G_Darien_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Darien_2];
+IF OBJECT_ID('dbo.[G_Bocas_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Bocas_2];
+IF OBJECT_ID('dbo.[G_Chitre_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Chitre_2];
+IF OBJECT_ID('dbo.[G_Colon_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Colon_2];
+IF OBJECT_ID('dbo.[G_K_Rey_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_K_Rey_2];
+IF OBJECT_ID('dbo.[G_Metro_Especializada_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Metro_Especializada_2];
+IF OBJECT_ID('dbo.[G_Metro_Ruta1_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Metro_Ruta1_2];
+IF OBJECT_ID('dbo.[G_Penonome_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Penonome_2];
+IF OBJECT_ID('dbo.[G_Metro_Ruta2_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Metro_Ruta2_2];
+IF OBJECT_ID('dbo.[G_Santiago_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Santiago_2];
+IF OBJECT_ID('dbo.[G_Chorrera_Este_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Chorrera_Este_2];
+IF OBJECT_ID('dbo.[G_Chorrera_Oeste_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Chorrera_Oeste_2];
+IF OBJECT_ID('dbo.[G_Chiriqui_Especializada_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Chiriqui_Especializada_2];
+IF OBJECT_ID('dbo.[G_Chiriqu_Off_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_Chiriqu_Off_2];
+IF OBJECT_ID('dbo.[G_K_99_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_K_99_2];
+IF OBJECT_ID('dbo.[ON_Moderno_2]', 'U') IS NOT NULL DROP TABLE [dbo].[ON_Moderno_2];
+IF OBJECT_ID('dbo.[G_ON_Mod_NABs_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_ON_Mod_NABs_2];
+IF OBJECT_ID('dbo.[G_ON_Tradicional_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_ON_Tradicional_2];
+IF OBJECT_ID('dbo.[G_PGC_2]', 'U') IS NOT NULL DROP TABLE [dbo].[G_PGC_2];
+IF OBJECT_ID('dbo.[Nacional_D_2]', 'U') IS NOT NULL DROP TABLE [dbo].[Nacional_D_2];
+IF OBJECT_ID('dbo.[Planning_D_2]', 'U') IS NOT NULL DROP TABLE [dbo].[Planning_D_2];
+IF OBJECT_ID('dbo.[GAPs_22]', 'U') IS NOT NULL DROP TABLE [dbo].[GAPs_22];
+IF OBJECT_ID('dbo.[GAPs_2_2]', 'U') IS NOT NULL DROP TABLE [dbo].[GAPs_2_2];
+
+-- CLEANUP STAGING
+IF OBJECT_ID('dbo.stg_gd_union_summ', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_union_summ;
+IF OBJECT_ID('dbo.stg_gd_with_sqvi', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_sqvi;
+IF OBJECT_ID('dbo.stg_gd_with_mat', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_mat;
+IF OBJECT_ID('dbo.stg_gd_cuota_agg', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_cuota_agg;
+IF OBJECT_ID('dbo.stg_gd_esq_2mo', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_esq_2mo;
+IF OBJECT_ID('dbo.stg_gd_esq_ytd', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_esq_ytd;
+IF OBJECT_ID('dbo.stg_gd_with_cuota', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_cuota;
+IF OBJECT_ID('dbo.stg_gd_summ2', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_summ2;
+IF OBJECT_ID('dbo.stg_gd_td', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_td;
+IF OBJECT_ID('dbo.stg_gd_with_proj', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_proj;
+IF OBJECT_ID('dbo.stg_gd_final', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_final;
+IF OBJECT_ID('dbo.stg_gd_gaps_mtd', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_mtd;
+IF OBJECT_ID('dbo.stg_gd_gaps_ly', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_ly;
+IF OBJECT_ID('dbo.stg_gd_gaps_joined', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_joined;
+IF OBJECT_ID('dbo.stg_gd_gaps_lm', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_lm;
+IF OBJECT_ID('dbo.stg_gd_gaps_sales_summ', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_sales_summ;
+IF OBJECT_ID('dbo.stg_gd_gaps_with_cuota', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_with_cuota;
+IF OBJECT_ID('dbo.stg_gd_gaps_all_keys', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_all_keys;
+IF OBJECT_ID('dbo.stg_gd_sqvi_filtered', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_sqvi_filtered;
+
+
+-- ============================================================================
+-- STEP 1: UNION sales + pedidos + LY + CUOTA + ESQUELETO_2Mo + ESQUELETO_YTD
+-- V3: Added Cuota as stream 4, Esqueleto_2Mo as stream 5, Esqueleto_YTD as
+--     stream 6 (matching Alteryx Tool 234 UNION → Tool 7 UNION) so ALL
+--     customer+material combos flow through SQVI/Materiales joins.
+-- ============================================================================
+EXEC('SELECT
+    [Calendar Day], [Customer Code], [Material], [Calendar Month], Mes,
+    SUM([Hls Pedidos]) AS [Hls Pedidos],
+    SUM(GSI) AS GSI, SUM(NTO) AS NTO,
+    SUM(Desc_Trade) AS Desc_Trade, SUM(Desc_Precio) AS Desc_Precio,
+    SUM(Desc_Total) AS Desc_Total, SUM(Hls) AS Hls,
+    SUM(HL_Trade) AS HL_Trade, SUM(HL_BTL_TOTAL) AS HL_BTL_TOTAL,
+    SUM([Hls Meta]) AS [Hls Meta], SUM([NTO Meta]) AS [NTO Meta],
+    SUM([Hls_Ult 2Mo]) AS [Hls_Ult 2Mo], SUM([NTO_Ult 2Mo]) AS [NTO_Ult 2Mo],
+    SUM([Hls_Ult YTD_2Mo]) AS [Hls_Ult YTD_2Mo], SUM([NTO_Ult YTD_2Mo]) AS [NTO_Ult YTD_2Mo]
+INTO dbo.stg_gd_union_summ
+FROM (
+    -- Stream 1: Current month sales
+    SELECT [Calendar Day], [Customer Code], CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20)) AS [Material],
+           ''2026.03'' AS [Calendar Month], ''Actual'' AS Mes,
+           CAST(0 AS FLOAT) AS [Hls Pedidos],
+           ISNULL([GSI],0) AS GSI, ISNULL([NTO],0) AS NTO,
+           ISNULL([Desc_Trade],0) AS Desc_Trade, ISNULL([Desc_Precio],0) AS Desc_Precio,
+           ISNULL([Desc_Total],0) AS Desc_Total,
+           ISNULL([Sales Volume (HL) - BIL],0) AS Hls,
+           ISNULL([HL_Trade],0) AS HL_Trade, ISNULL([HL_BTL_TOTAL],0) AS HL_BTL_TOTAL,
+           CAST(0 AS FLOAT) AS [Hls Meta], CAST(0 AS FLOAT) AS [NTO Meta],
+           CAST(0 AS FLOAT) AS [Hls_Ult 2Mo], CAST(0 AS FLOAT) AS [NTO_Ult 2Mo],
+           CAST(0 AS FLOAT) AS [Hls_Ult YTD_2Mo], CAST(0 AS FLOAT) AS [NTO_Ult YTD_2Mo]
+    FROM [dbo].[2018_Mes_D]
+
+    UNION ALL
+    -- Stream 2: Pedidos (orders) as current month
+    SELECT [Fecha de Pedido] AS [Calendar Day], [Solic] AS [Customer Code],
+           CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20)) AS [Material],
+           ''2026.03'' AS [Calendar Month], ''Actual'' AS Mes,
+           ISNULL([Sum_Hls],0) AS [Hls Pedidos],
+           0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    FROM [dbo].[Pedidos_M_2018]
+
+    UNION ALL
+    -- Stream 3: Last year sales
+    SELECT [Calendar Day], [Customer Code], CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20)) AS [Material],
+           ''2025.03'' AS [Calendar Month], ''Año Pasado'' AS Mes,
+           CAST(0 AS FLOAT) AS [Hls Pedidos],
+           ISNULL([GSI],0), ISNULL([NTO],0),
+           ISNULL([Desc_Trade],0), ISNULL([Desc_Precio],0),
+           ISNULL([Desc_Total],0), ISNULL([Sales Volume (HL) - BIL],0),
+           ISNULL([HL_Trade],0), ISNULL([HL_BTL_TOTAL],0),
+           0, 0, 0, 0, 0, 0
+    FROM [dbo].[2017_M_D]
+
+    UNION ALL
+    -- Stream 4: Cuota (quota targets)
+    SELECT CAST(''2026-03-31'' AS DATE) AS [Calendar Day],
+           [Customer Code],
+           CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20)) AS [Material],
+           ''2026.03'' AS [Calendar Month], ''Actual'' AS Mes,
+           0, 0, 0, 0, 0, 0, 0, 0, 0,
+           SUM(ISNULL([Hls],0)),
+           SUM(ISNULL([NTO],0)),
+           0, 0, 0, 0
+    FROM [dbo].[Cuota_Clientes]
+    GROUP BY [Customer Code], CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20))
+
+    UNION ALL
+    -- Stream 5: Esqueleto last 2 months (AVG by Customer+Material)
+    SELECT CAST(''2026-03-31'' AS DATE) AS [Calendar Day],
+           [Customer Code],
+           CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20)) AS [Material],
+           ''2026.03'' AS [Calendar Month], ''Actual'' AS Mes,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           AVG([Sales Volume (HL) - BIL]),
+           AVG([NTO]),
+           0, 0
+    FROM [dbo].[Esqueleto_2017_2018_c_NTO]
+    WHERE [Calendar Month] IN (''2026.01'', ''2026.02'')
+    GROUP BY [Customer Code], CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20))
+
+    UNION ALL
+    -- Stream 6: Esqueleto YTD minus 2 months (AVG by Customer+Material)
+    SELECT CAST(''2026-03-31'' AS DATE) AS [Calendar Day],
+           [Customer Code],
+           CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20)) AS [Material],
+           ''2026.03'' AS [Calendar Month], ''Actual'' AS Mes,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           AVG([Sales Volume (HL) - BIL]),
+           AVG([NTO])
+    FROM [dbo].[Esqueleto_2017_2018_c_NTO]
+    WHERE [Calendar Month] IN (''2025.01'', ''2025.02'')
+    GROUP BY [Customer Code], CAST(LTRIM(RTRIM([Material])) AS VARCHAR(20))
+) combined
+GROUP BY [Calendar Day], [Customer Code], [Material], [Calendar Month], Mes');
+
+
+-- ============================================================================
+-- STEP 2: JOIN WITH SQVI (filtered: LEFT(CC,1)!='6' AND LEN(CC)>7)
+-- ============================================================================
+EXEC('SELECT
+    s.*,
+    sqvi.[Nombre 3] AS [Nombre Cliente], sqvi.[GVen],
+    sqvi.[Denominación] AS [Sub-Canal], sqvi.[Nombre 1] AS Centro,
+    sqvi.[ZV] AS Ruta, sqvi.[Región], sqvi.[Gerencia],
+    sqvi.[Canal], sqvi.[Cadena]
+INTO dbo.stg_gd_with_sqvi
+FROM dbo.stg_gd_union_summ s
+INNER JOIN [dbo].[SQVI] sqvi ON s.[Customer Code] = sqvi.[Cliente]
+WHERE LEFT(sqvi.[Cliente], 1) != ''6'' AND LEN(sqvi.[Cliente]) > 7');
+
+
+-- ============================================================================
+-- STEP 3: JOIN WITH MATERIALES (INNER JOIN on Material)
+-- ============================================================================
+EXEC('SELECT s.*,
+    mat.[Product Category-Global] AS [Categoría], mat.[Brand-Local] AS Marca,
+    mat.[Capacity] AS Empaque, mat.[Pack Group], mat.[SKU-Local Name]
+INTO dbo.stg_gd_with_mat
+FROM dbo.stg_gd_with_sqvi s
+INNER JOIN [dbo].[Materiales] mat ON s.[Material] = mat.[Material]');
+
+
+-- ============================================================================
+-- STEP 4: Build stg_gd_with_cuota for Nacional_D / Planning_D
+-- V3: Cuota + Esqueleto already in stg_gd_with_mat from Step 1 UNION.
+--     Just rename columns for downstream compatibility.
+-- ============================================================================
+EXEC('SELECT s.*
+INTO dbo.stg_gd_with_cuota
+FROM dbo.stg_gd_with_mat s');
+
+
+-- ============================================================================
+-- STEP 5: TRADING DAYS
+-- ============================================================================
+EXEC('SELECT TOP 1
+    td.[TD Month], td.[TD Month Current],
+    td.[TD Month] - td.[TD Month Current] AS Restantes
+INTO dbo.stg_gd_td
+FROM [dbo].[TD_03_2026] td
+WHERE td.[Fecha] = CASE
+    WHEN CONVERT(VARCHAR, GETDATE(), 23) > (SELECT MAX([Fecha]) FROM [dbo].[TD_03_2026])
+    THEN (SELECT MAX([Fecha]) FROM [dbo].[TD_03_2026])
+    ELSE CONVERT(VARCHAR, GETDATE(), 23)
+END');
+
+
+-- ============================================================================
+-- STEP 6: GAPs_22 - V3 RESTRUCTURED
+-- All combos (sales + cuota + esqueleto) already in stg_gd_with_mat.
+-- Just summarize to cust+mat → RIGHT JOIN SQVI → add TD/projections.
+-- ============================================================================
+
+-- 6a: Summarize to customer+material level (Year=2026 only)
+EXEC('SELECT
+    s.[Región], s.Centro, s.[Gerencia], s.Ruta, s.[Canal], s.[Sub-Canal], s.[Cadena],
+    s.[Customer Code], s.[Nombre Cliente],
+    s.[Categoría], s.Marca, s.[Pack Group], s.Empaque, s.[Material], s.[SKU-Local Name],
+    SUM(ISNULL(s.GSI,0)) AS GSI, SUM(ISNULL(s.NTO,0)) AS NTO,
+    SUM(ISNULL(s.Desc_Trade,0)) AS Desc_Trade, SUM(ISNULL(s.Desc_Precio,0)) AS Desc_Precio,
+    SUM(ISNULL(s.Desc_Total,0)) AS Desc_Total, SUM(ISNULL(s.Hls,0)) AS Hls,
+    SUM(ISNULL(s.HL_Trade,0)) AS HL_Trade, SUM(ISNULL(s.HL_BTL_TOTAL,0)) AS HL_BTL_TOTAL,
+    SUM(ISNULL(s.[Hls Pedidos],0)) AS [Hls Pedidos],
+    SUM(ISNULL(s.[Hls Meta],0)) AS [Hls Meta],
+    SUM(ISNULL(s.[NTO Meta],0)) AS [NTO Meta],
+    SUM(ISNULL(s.[Hls_Ult 2Mo],0)) AS [Hls_Ult 2Mo],
+    SUM(ISNULL(s.[NTO_Ult 2Mo],0)) AS [NTO_Ult 2Mo],
+    SUM(ISNULL(s.[Hls_Ult YTD_2Mo],0)) AS [Hls_Ult YTD-2Mo],
+    SUM(ISNULL(s.[NTO_Ult YTD_2Mo],0)) AS [NTO_Ult YTD-2Mo]
+INTO dbo.stg_gd_gaps_sales_summ
+FROM dbo.stg_gd_with_mat s
+WHERE YEAR(s.[Calendar Day]) = 2026
+GROUP BY
+    s.[Región], s.Centro, s.[Gerencia], s.Ruta, s.[Canal], s.[Sub-Canal], s.[Cadena],
+    s.[Customer Code], s.[Nombre Cliente],
+    s.[Categoría], s.Marca, s.[Pack Group], s.Empaque, s.[Material], s.[SKU-Local Name]');
+
+-- 6b: Filtered SQVI for RIGHT OUTER JOIN
+EXEC('SELECT
+    [Cliente] AS [Customer Code],
+    [Nombre 3] AS [Nombre Cliente],
+    [Canal], [Denominación] AS [Sub-Canal], [Nombre 1] AS Centro,
+    [Región], [Gerencia], [ZV] AS Ruta, [Cadena]
+INTO dbo.stg_gd_sqvi_filtered
+FROM [dbo].[SQVI]
+WHERE LEFT([Cliente], 1) != ''6'' AND LEN([Cliente]) > 7');
+
+-- 6c: Add projections, TD fields, RIGHT JOIN SQVI for SQVI-only customers
+EXEC('SELECT
+    ISNULL(g.[Región], sq.[Región]) AS [Región],
+    ISNULL(g.Centro, sq.Centro) AS Centro,
+    ISNULL(g.[Gerencia], sq.[Gerencia]) AS [Gerencia],
+    ISNULL(g.Ruta, sq.Ruta) AS Ruta,
+    ISNULL(g.[Canal], sq.[Canal]) AS [Canal],
+    ISNULL(g.[Sub-Canal], sq.[Sub-Canal]) AS [Sub-Canal],
+    ISNULL(g.[Cadena], sq.[Cadena]) AS [Cadena],
+    ISNULL(g.[Customer Code], sq.[Customer Code]) AS [Customer Code],
+    ISNULL(g.[Nombre Cliente], sq.[Nombre Cliente]) AS [Nombre Cliente],
+    g.[Categoría], g.Marca, g.[Pack Group], g.Empaque, CAST(g.[Material] AS BIGINT) AS [Material], g.[SKU-Local Name],
+    ISNULL(g.GSI, 0) AS GSI,
+    ISNULL(g.NTO, 0) AS NTO,
+    ISNULL(g.Desc_Trade, 0) AS Desc_Trade,
+    ISNULL(g.Desc_Precio, 0) AS Desc_Precio,
+    ISNULL(g.Desc_Total, 0) AS Desc_Total,
+    ISNULL(g.Hls, 0) AS Hls,
+    ISNULL(g.HL_Trade, 0) AS HL_Trade,
+    ISNULL(g.HL_BTL_TOTAL, 0) AS HL_BTL_TOTAL,
+    ISNULL(g.[Hls Pedidos], 0) AS [Hls Pedidos],
+    ISNULL(g.[Hls Meta], 0) AS [Hls Meta],
+    ISNULL(g.[NTO Meta], 0) AS [NTO Meta],
+    ISNULL(g.[Hls_Ult 2Mo], 0) AS [Hls_Ult 2Mo],
+    ISNULL(g.[NTO_Ult 2Mo], 0) AS [NTO_Ult 2Mo],
+    ISNULL(g.[Hls_Ult YTD-2Mo], 0) AS [Hls_Ult YTD-2Mo],
+    ISNULL(g.[NTO_Ult YTD-2Mo], 0) AS [NTO_Ult YTD-2Mo],
+    CASE WHEN g.[Customer Code] IS NULL THEN 0 ELSE td.[TD Month Current] END AS [TD Month Current],
+    CASE WHEN g.[Customer Code] IS NULL THEN 0 ELSE td.[TD Month] END AS [TD Month],
+    CASE WHEN g.[Customer Code] IS NULL THEN 0 ELSE td.Restantes END AS Restantes,
+    CASE WHEN g.[Customer Code] IS NULL THEN 0
+         WHEN td.[TD Month Current] > 0
+         THEN ISNULL(g.Hls, 0) + (ISNULL(g.Hls, 0) / td.[TD Month Current]) * td.Restantes
+         ELSE ISNULL(g.Hls, 0) END AS [Hls Proy],
+    CASE WHEN g.[Customer Code] IS NULL THEN 0
+         WHEN td.[TD Month Current] > 0
+         THEN ISNULL(g.NTO, 0) + (ISNULL(g.NTO, 0) / td.[TD Month Current]) * td.Restantes
+         ELSE ISNULL(g.NTO, 0) END AS [NTO Proy],
+    CONCAT(ISNULL(g.[Customer Code], sq.[Customer Code]), ''-'',
+           ISNULL(g.[Nombre Cliente], sq.[Nombre Cliente])) AS Cliente
+INTO dbo.stg_gd_with_proj
+FROM dbo.stg_gd_gaps_sales_summ g
+RIGHT JOIN dbo.stg_gd_sqvi_filtered sq
+    ON g.[Customer Code] = sq.[Customer Code]
+CROSS JOIN dbo.stg_gd_td td');
+
+
+-- ============================================================================
+-- OUTPUT 1: Nacional_D_2 (from day-level data, both Mes values)
+-- V3: Esqueleto columns use underscore naming from Step 1 UNION
+-- ============================================================================
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [GVen], [Gerencia], Ruta,
+    [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO,
+    ISNULL(Desc_Trade,0) AS Desc_Trade, ISNULL(Desc_Precio,0) AS Desc_Precio,
+    ISNULL(Desc_Total,0) AS Desc_Total, ISNULL(Hls,0) AS Hls,
+    ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo],
+    CAST([Customer Code] AS VARCHAR(255)) AS [R_Customer Code],
+    CAST([Material] AS VARCHAR(255)) AS [R_Material],
+    CONCAT([Customer Code], ''-'', [Nombre Cliente]) AS Cliente
+INTO [dbo].[Nacional_D_2]
+FROM dbo.stg_gd_with_cuota');
+
+
+-- ============================================================================
+-- OUTPUT 2: Planning_D_2 (Filter Mes='Actual', summarize, add Month/Year/Day)
+-- ============================================================================
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [GVen], [Gerencia],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    SUM(ISNULL(Hls,0)) AS Hls, SUM(ISNULL([Hls Pedidos],0)) AS [Hls Pedidos]
+INTO [dbo].[Planning_D_2]
+FROM dbo.stg_gd_with_cuota
+WHERE Mes = ''Actual''
+GROUP BY [Calendar Month], [Calendar Day],
+    [Región], Centro, [GVen], [Gerencia],
+    [Categoría], Marca, [Pack Group], Empaque, [Material], [SKU-Local Name], Mes');
+
+
+-- ============================================================================
+-- OUTPUT 3: GAPs_22 (from stg_gd_with_proj - has TD fields, no Calendar Day)
+-- ============================================================================
+EXEC('SELECT
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque, [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO,
+    ISNULL(Desc_Trade,0) AS Desc_Trade, ISNULL(Desc_Precio,0) AS Desc_Precio,
+    ISNULL(Desc_Total,0) AS Desc_Total, ISNULL(Hls,0) AS Hls,
+    ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD-2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD-2Mo],0) AS [NTO_Ult YTD-2Mo],
+    [TD Month Current], [TD Month], Restantes,
+    ISNULL([Hls Proy],0) AS [Hls Proy], ISNULL([NTO Proy],0) AS [NTO Proy],
+    Cliente
+INTO [dbo].[GAPs_22]
+FROM dbo.stg_gd_with_proj');
+
+
+-- ============================================================================
+-- GERENCIA TABLES: From stg_gd_with_cuota (day-level, same as Nacional_D)
+-- V3: Changed source from stg_gd_with_proj to stg_gd_with_cuota to match
+--     original Alteryx which filters Nacional_D by Gerencia
+-- ============================================================================
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Darien_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Darien''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Bocas_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Bocas''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Chitre_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Chitre''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Colon_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Colón''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_K_Rey_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''KAM REY / C STORE''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Metro_Especializada_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Metro Especializado''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Metro_Ruta1_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Metro Ruta 1''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Penonome_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Penonome''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Metro_Ruta2_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Metro Ruta 2''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Santiago_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Santiago''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Chorrera_Este_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Chorrera Este''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Chorrera_Oeste_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Chorrera Oeste''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Chiriqui_Especializada_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Chiriqui Especializada''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_Chiriqu_Off_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''Chiriqui Rutas Off''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_K_99_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''KAM 99 / C STORE''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[ON_Moderno_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''ON Moderno''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_ON_Mod_NABs_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''ON Moderno NABs''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_ON_Tradicional_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''ON Tradicional''');
+
+EXEC('SELECT
+    [Calendar Month], [Calendar Day],
+    [Región], Centro, [Gerencia], Ruta, [Canal], [Sub-Canal], [Cadena],
+    [Customer Code], [Nombre Cliente],
+    [Categoría], Marca, [Pack Group], Empaque,
+    CAST([Material] AS BIGINT) AS [Material], [SKU-Local Name],
+    ISNULL(GSI,0) AS GSI, ISNULL(NTO,0) AS NTO, ISNULL(Desc_Trade,0) AS Desc_Trade,
+    ISNULL(Desc_Precio,0) AS Desc_Precio, ISNULL(Desc_Total,0) AS Desc_Total,
+    ISNULL(Hls,0) AS Hls, ISNULL(HL_Trade,0) AS HL_Trade, ISNULL(HL_BTL_TOTAL,0) AS HL_BTL_TOTAL,
+    ISNULL([Hls Pedidos],0) AS [Hls Pedidos],
+    Mes,
+    RIGHT(''0'' + CAST(MONTH([Calendar Day]) AS VARCHAR(2)), 2) AS [Month],
+    CAST(YEAR([Calendar Day]) AS VARCHAR(4)) AS [Year],
+    RIGHT(''0'' + CAST(DAY([Calendar Day]) AS VARCHAR(2)), 2) AS [Day],
+    ISNULL([Hls Meta],0) AS [Hls Meta], ISNULL([NTO Meta],0) AS [NTO Meta],
+    ISNULL([Hls_Ult 2Mo],0) AS [Hls_Ult 2Mo], ISNULL([NTO_Ult 2Mo],0) AS [NTO_Ult 2Mo],
+    ISNULL([Hls_Ult YTD_2Mo],0) AS [Hls_Ult YTD-2Mo], ISNULL([NTO_Ult YTD_2Mo],0) AS [NTO_Ult YTD-2Mo]
+INTO [dbo].[G_PGC_2] FROM dbo.stg_gd_with_cuota WHERE [Gerencia] = ''PGC''');
+
+
+-- ============================================================================
+-- OUTPUT: GAPs_2_2 - Beer YoY and MoM comparison
+-- 3-way FULL OUTER JOIN so LM-only customer+material combos are included
+-- ============================================================================
+
+-- Beer MTD current (from stg_gd_with_proj which now has correct Hls)
+EXEC('SELECT [Material], [Customer Code], [Nombre Cliente], SUM(ISNULL(Hls,0)) AS Hls_mtd
+INTO dbo.stg_gd_gaps_mtd
+FROM dbo.stg_gd_with_proj WHERE [Categoría] = ''Beer''
+GROUP BY [Material], [Customer Code], [Nombre Cliente]');
+
+-- Beer MTD Last Year
+EXEC('SELECT CAST(LTRIM(RTRIM(d.[Material])) AS VARCHAR(20)) AS [Material],
+    d.[Customer Code], SUM(d.[Sales Volume (HL) - BIL]) AS Hls_mtd_ly
+INTO dbo.stg_gd_gaps_ly
+FROM [dbo].[2017_M_D] d
+INNER JOIN [dbo].[Materiales] mat ON CAST(LTRIM(RTRIM(d.[Material])) AS VARCHAR(20)) = mat.[Material]
+WHERE mat.[Product Category-Global] = ''Beer'' AND d.[Calendar Day] <= DATEADD(YEAR, -1, GETDATE())
+GROUP BY CAST(LTRIM(RTRIM(d.[Material])) AS VARCHAR(20)), d.[Customer Code]');
+
+-- Beer MTD Last Month (HistoricosPanama)
+EXEC('SELECT CAST(LTRIM(RTRIM(d.[Material])) AS VARCHAR(20)) AS [Material],
+    d.[Customer Code], SUM(d.[Sales Volume (HL) - BIL]) AS Hls_mtd_lm
+INTO dbo.stg_gd_gaps_lm
+FROM [HistoricosPanama].[dbo].[2026_02_D] d
+INNER JOIN [dbo].[Materiales] mat ON CAST(LTRIM(RTRIM(d.[Material])) AS VARCHAR(20)) = mat.[Material]
+WHERE mat.[Product Category-Global] = ''Beer'' AND d.[Calendar Day] <= DATEADD(MONTH, -1, GETDATE())
+GROUP BY CAST(LTRIM(RTRIM(d.[Material])) AS VARCHAR(20)), d.[Customer Code]');
+
+-- 3-way FULL OUTER JOIN: current + LY + LM, then LEFT JOIN Materiales for Marca
+EXEC('SELECT
+    COALESCE(c.[Material], ly.[Material], lm.[Material]) AS Material,
+    COALESCE(c.[Customer Code], ly.[Customer Code], lm.[Customer Code]) AS [Customer Code],
+    c.[Nombre Cliente],
+    ISNULL(c.Hls_mtd, 0) AS Hls_mtd,
+    ISNULL(ly.Hls_mtd_ly, 0) AS Hls_mtd_ly,
+    COALESCE(c.Hls_mtd / NULLIF(ly.Hls_mtd_ly, 0), 0) AS [%_ly],
+    ISNULL(lm.Hls_mtd_lm, 0) AS Hls_mtd_lm,
+    COALESCE(c.Hls_mtd / NULLIF(lm.Hls_mtd_lm, 0), 0) AS [%_lm],
+    mat.[Brand-Local] AS Marca, mat.[Capacity]
+INTO [dbo].[GAPs_2_2]
+FROM dbo.stg_gd_gaps_mtd c
+FULL OUTER JOIN dbo.stg_gd_gaps_ly ly
+    ON c.[Customer Code] = ly.[Customer Code] AND c.[Material] = ly.[Material]
+FULL OUTER JOIN dbo.stg_gd_gaps_lm lm
+    ON COALESCE(c.[Customer Code], ly.[Customer Code]) = lm.[Customer Code]
+    AND COALESCE(c.[Material], ly.[Material]) = lm.[Material]
+LEFT JOIN [dbo].[Materiales] mat
+    ON COALESCE(c.[Material], ly.[Material], lm.[Material]) = mat.[Material]');
+
+
+-- ============================================================================
+-- CLEANUP STAGING
+-- ============================================================================
+/*
+IF OBJECT_ID('dbo.stg_gd_union_summ', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_union_summ;
+IF OBJECT_ID('dbo.stg_gd_with_sqvi', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_sqvi;
+IF OBJECT_ID('dbo.stg_gd_with_mat', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_mat;
+IF OBJECT_ID('dbo.stg_gd_cuota_agg', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_cuota_agg;
+IF OBJECT_ID('dbo.stg_gd_esq_2mo', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_esq_2mo;
+IF OBJECT_ID('dbo.stg_gd_esq_ytd', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_esq_ytd;
+IF OBJECT_ID('dbo.stg_gd_with_cuota', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_cuota;
+IF OBJECT_ID('dbo.stg_gd_summ2', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_summ2;
+IF OBJECT_ID('dbo.stg_gd_td', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_td;
+IF OBJECT_ID('dbo.stg_gd_with_proj', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_with_proj;
+IF OBJECT_ID('dbo.stg_gd_final', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_final;
+IF OBJECT_ID('dbo.stg_gd_gaps_mtd', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_mtd;
+IF OBJECT_ID('dbo.stg_gd_gaps_ly', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_ly;
+IF OBJECT_ID('dbo.stg_gd_gaps_joined', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_joined;
+IF OBJECT_ID('dbo.stg_gd_gaps_lm', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_lm;
+IF OBJECT_ID('dbo.stg_gd_gaps_sales_summ', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_sales_summ;
+IF OBJECT_ID('dbo.stg_gd_gaps_with_cuota', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_with_cuota;
+IF OBJECT_ID('dbo.stg_gd_gaps_all_keys', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_gaps_all_keys;
+IF OBJECT_ID('dbo.stg_gd_sqvi_filtered', 'U') IS NOT NULL DROP TABLE dbo.stg_gd_sqvi_filtered;
+*/
