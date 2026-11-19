@@ -1,12 +1,8 @@
 -- ============================================================================
 -- DSR (Daily Sales Report) SQL Translation from Alteryx Workflow
--- VERSION v4.1 (19-nov-2026) = v4 (marzo 2026) con UN solo cambio:
---   CAMBIO v4.1: los meses del YTD (YTD_Current / YTD_LY) ya no estan fijos en 2026.01 - 2026.02;
---   ahora van de enero al mes anterior al actual, calculado con GETDATE().
+-- VERSION v5 - DiaSemana1 + Inglés/Español fields in Daily output
 -- Output tables: DSR_M_2018_Reloaded_2, DSR_08_2018_Reloaded_Daily_2
 -- ============================================================================
-
-USE WarehousePanama;
 
 -- Clean up existing tables
 IF OBJECT_ID('dbo.[DSR_M_2018_Reloaded_2]', 'U') IS NOT NULL DROP TABLE dbo.[DSR_M_2018_Reloaded_2];
@@ -75,23 +71,21 @@ MonthWithYTD AS (
     FROM MonthSummary
 ),
 
--- CAMBIO v4.1: antes  between FORMAT(GETDATE(), '2026.01') and FORMAT(GETDATE(), '2026.02')
 YTD_Current AS (
     SELECT [Customer Code], [Material],
         SUM([Sales Volume (HL) - BIL]) AS [HlsYTD], SUM([NTO]) AS [NTOYTD]
     FROM [dbo].[Esqueleto_2017_2018_c_NTO]
-    WHERE [Calendar Month] BETWEEN FORMAT(GETDATE(), 'yyyy') + '.01'
-                               AND FORMAT(DATEADD(MONTH, -1, GETDATE()), 'yyyy.MM')
+    WHERE [Calendar Month] >= FORMAT(DATEFROMPARTS(YEAR(GETDATE()), 1, 1), 'yyyy.MM')
+    AND [Calendar Month] < FORMAT(DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1), 'yyyy.MM')
     GROUP BY [Customer Code], [Material]
 ),
 
--- CAMBIO v4.1: antes  between FORMAT(DATEADD(YEAR, -1, GETDATE()), '2025.01') and FORMAT(GETDATE(), '2025.02')
 YTD_LY AS (
     SELECT [Customer Code], [Material],
         SUM([Sales Volume (HL) - BIL]) AS [HlsYTDLY], SUM([NTO]) AS [NTOYTDLY]
     FROM [dbo].[Esqueleto_2017_2018_c_NTO]
-    WHERE [Calendar Month] BETWEEN FORMAT(DATEADD(YEAR, -1, GETDATE()), 'yyyy') + '.01'
-                               AND FORMAT(DATEADD(MONTH, -1, DATEADD(YEAR, -1, GETDATE())), 'yyyy.MM')
+    WHERE [Calendar Month] >= FORMAT(DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1), 'yyyy.MM')
+     AND [Calendar Month] < FORMAT(DATEFROMPARTS(YEAR(GETDATE()) - 1, MONTH(GETDATE()), 1), 'yyyy.MM')
     GROUP BY [Customer Code], [Material]
 ),
 
@@ -231,10 +225,6 @@ FirstSummarize AS (
         [SKU-Local Name], [Pack Group], [Centro], [Category Group], [Televendedor]
 ),
 
--- ============================================================================
--- FIX v4: QUOTA DATA - Now pulling ALL dimensions from Cuota directly
--- No more Materiales join needed for quotas
--- ============================================================================
 HlsDiaMeta AS (
     SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
         [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
@@ -309,7 +299,6 @@ NTOMesMetaTotal AS (
         [Category Group], [SKU-Local Name], [Codigo]
 ),
 
--- Union all 6 quota streams with full dimensions
 QuotaUnioned AS (
     SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
         [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
@@ -349,7 +338,6 @@ QuotaUnioned AS (
     FROM NTOMesMetaTotal
 ),
 
--- Summarize quotas by ALL dimension fields
 QuotaSummarized AS (
     SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
         [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
@@ -364,7 +352,6 @@ QuotaSummarized AS (
         [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material]
 ),
 
--- UNION main data with quotas (quotas now have full dimensions from Cuota table)
 MainDataForUnion AS (
     SELECT [Ruta], [Dirección], [Región], [Gerencia], [Canal],
         [Categoria], [Brand-Local], [Capacity], [Material],
@@ -457,7 +444,6 @@ WithTradingDays AS (
     FROM FinalSummaryCleaned fs CROSS JOIN TradingDays td
 ),
 
--- KPI Split
 KPI_Hls AS (
     SELECT [Ruta],[Dirección],[Región],[Gerencia],[Canal],[Categoria],
         [Brand-Local],[Capacity],[Material],[Pack Group],[SKU-Local Name],
@@ -483,9 +469,11 @@ KPI_NTO AS (
         [Sum_NTOMesLY] AS [MesLY], [Sum_NTOMes] AS [Mes],
         [Sum_NTOYTD] AS [YTD], [Sum_NTOYTDLY] AS [YTDLY],
         [Sum_NTODiaMeta] AS [DiaMeta], [Sum_NTOMesMeta] AS [MesMeta], [Sum_NTOMesMetaTotal] AS [MesMetaTotal],
-        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
-        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
-        CAST(NULL AS FLOAT),
+        CAST(NULL AS FLOAT) AS [NTODia], CAST(NULL AS FLOAT) AS [NTODiaLY],
+        CAST(NULL AS FLOAT) AS [NTOMesLY], CAST(NULL AS FLOAT) AS [NTOMes],
+        CAST(NULL AS FLOAT) AS [NTOYTD], CAST(NULL AS FLOAT) AS [NTOYTDLY],
+        CAST(NULL AS FLOAT) AS [NTOMesMeta], CAST(NULL AS FLOAT) AS [NTOMesMetaTotal],
+        CAST(NULL AS FLOAT) AS [NTODiaMeta],
         [TD Month Current],[TD Month],[TD Month LY Current],[TD Month LY]
     FROM WithTradingDays
 ),
@@ -512,7 +500,7 @@ AllKPIs AS (
 ),
 
 WithCalculations AS (
-    SELECT *,
+    SELECT *, 
         CASE WHEN [TD Month Current] > 0 THEN [Mes] / [TD Month Current] ELSE 0 END AS [xDia],
         CASE WHEN [TD Month LY Current] > 0 THEN [MesLY] / [TD Month LY Current] ELSE 0 END AS [xDíaLY],
         CASE WHEN [TD Month Current] > 0
@@ -554,6 +542,53 @@ FinalOutput AS (
 )
 
 SELECT * INTO [dbo].[DSR_M_2018_Reloaded_2] FROM FinalOutput;
+
+-- ============================================
+-- DiasRestantes Update
+-- ============================================
+DELETE FROM DiasRestantes;
+
+INSERT INTO DiasRestantes ([2018_01], [2019_01], [Días])
+SELECT
+    [TD Month LY],
+    [TD Month],
+    '1. De Ventas'
+FROM (
+    SELECT
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE()) THEN [DC01] ELSE 0 END) AS [TD Month],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE()) AND [Fecha] <= CAST(GETDATE() AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month Current],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR,-1,GETDATE())) AND YEAR([Fecha]) = YEAR(DATEADD(YEAR,-1,GETDATE())) THEN [DC01] ELSE 0 END) AS [TD Month LY],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR,-1,GETDATE())) AND YEAR([Fecha]) = YEAR(DATEADD(YEAR,-1,GETDATE())) AND [Fecha] <= CAST(DATEADD(YEAR,-1,GETDATE()) AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month LY Current]
+    FROM [dbo].[Trading Days F18]
+) T
+
+UNION ALL
+
+SELECT
+    [TD Month LY Current],
+    [TD Month Current],
+    '2. Transcurridos'
+FROM (
+    SELECT
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE()) AND [Fecha] <= CAST(GETDATE() AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month Current],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR,-1,GETDATE())) AND YEAR([Fecha]) = YEAR(DATEADD(YEAR,-1,GETDATE())) AND [Fecha] <= CAST(DATEADD(YEAR,-1,GETDATE()) AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month LY Current]
+    FROM [dbo].[Trading Days F18]
+) T
+
+UNION ALL
+
+SELECT
+    [TD Month LY] - [TD Month LY Current],
+    [TD Month] - [TD Month Current],
+    '3. Restantes'
+FROM (
+    SELECT
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE()) THEN [DC01] ELSE 0 END) AS [TD Month],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE()) AND [Fecha] <= CAST(GETDATE() AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month Current],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR,-1,GETDATE())) AND YEAR([Fecha]) = YEAR(DATEADD(YEAR,-1,GETDATE())) THEN [DC01] ELSE 0 END) AS [TD Month LY],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR,-1,GETDATE())) AND YEAR([Fecha]) = YEAR(DATEADD(YEAR,-1,GETDATE())) AND [Fecha] <= CAST(DATEADD(YEAR,-1,GETDATE()) AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month LY Current]
+    FROM [dbo].[Trading Days F18]
+) T;
 
 
 -- ============================================================================
@@ -629,7 +664,6 @@ DailyDimSummary AS (
         [Gerencia], [Canal], [Centro], [Capacity], [Cluster]
 ),
 
--- FIX v4: Daily Cuota now includes all dimension fields from Cuota table
 Stream_Cuota_Daily AS (
     SELECT c.[Fecha] AS [Calendar Day], c.[Categoria], c.[Brand-Local],
         c.[Ruta], c.[Dirección], c.[Región], c.[Gerencia de Ventas] AS [Gerencia],
@@ -672,16 +706,19 @@ DayTranslation AS (
 FinalDaily AS (
     SELECT dfs.*, ISNULL(dfs.[Hls], 0) AS [Hls2], ISNULL(dfs.[HlsLY], 0) AS [HlsLY2],
         ISNULL(dfs.[HlsPedidos], 0) AS [HlsPedidos2], ISNULL(dfs.[Meta], 0) AS [Meta2],
-        dt.[Español] AS [DiaSemana]
+        dt.[Inglés], dt.[Español], dt.[Inglés] AS [DiaSemana1]
     FROM DailyFinalSummary dfs LEFT JOIN DayTranslation dt ON DATENAME(WEEKDAY, dfs.[Calendar Day]) = dt.[Inglés]
 )
 
-SELECT [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
-    [Gerencia], [Canal], [Centro], [Capacity], [Cluster],
-    [Hls2] AS [Hls], [HlsLY2] AS [HlsLY], [HlsPedidos2] AS [HlsPedidos], [Meta2] AS [Meta], [DiaSemana]
+SELECT CAST([Calendar Day] AS DATE) AS [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
+    [Gerencia], [Canal], [Centro], [Capacity], CAST([Cluster] AS VARCHAR(255)) AS [Cluster],
+    [Hls2] AS [Hls], [HlsLY2] AS [HlsLY], [HlsPedidos2] AS [HlsPedidos], [Meta2] AS [Meta],
+    CAST([DiaSemana1] AS CHAR(50)) AS [DiaSemana1],
+    CAST([Inglés] AS CHAR(10)) AS [Inglés],
+    CAST([Español] AS CHAR(10)) AS [Español]
 INTO [dbo].[DSR_08_2018_Reloaded_Daily_2]
 FROM FinalDaily;
 
 
-PRINT 'DSR v4.1 script executed successfully.';
+PRINT 'DSR v5 script executed successfully.';
 PRINT 'Tables created: DSR_M_2018_Reloaded_2, DSR_08_2018_Reloaded_Daily_2';
