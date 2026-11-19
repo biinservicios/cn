@@ -1,0 +1,1987 @@
+-- ============================================================================
+-- SQL Translation of Alteryx Workflow: Pedidos
+-- For execution in Pentaho on SQL Server (WarehousePanama)
+-- ============================================================================
+-- FIX v7: Each output is a self-contained statement with its own CTEs.
+-- No temp tables, no DECLARE variables, no cross-statement CTE references.
+-- All lookups inlined as CTEs/CASE/IN clauses (following DSR pattern).
+--   Pedidos: Creado_el, Doc._venta, Cantidad_de_pedido, FePrefEnt., FePrefEnt._1
+--   2018_Mes_D_Fact: Doc._venta, Doc.venta (two separate columns)
+-- ============================================================================
+-- OUTPUT TABLES:
+--   1. Detalle_2
+--   2. ResumenCategorias_2
+--   3. Detalle_Clientes_2
+--   4. Esetatus_Pedidos_2018_M_2
+--   5. concilia_pedidos_rechazados_otros_2
+--   6. pedidos_rechazados_2
+--   7. TransportesRetrasados_2
+--   8. PedidosEntregas_1_2
+-- ============================================================================
+
+USE WarehousePanama;
+
+-- ============================================================================
+-- PARAMETERS: Month='02', Year='2026' (hardcoded inline - update in all
+-- occurrences of '02' for month and '2026' for year when changing period)
+-- ============================================================================
+
+-- ============================================================================
+-- CLEANUP
+-- ============================================================================
+TRUNCATE TABLE [dbo].[Detalle_2];
+TRUNCATE TABLE [dbo].[ResumenCategorias_2];
+TRUNCATE TABLE [dbo].[Detalle_Clientes_2];
+TRUNCATE TABLE [dbo].[Esetatus_Pedidos_2018_M_2];
+TRUNCATE TABLE [dbo].[concilia_pedidos_rechazados_otros_2];
+TRUNCATE TABLE [dbo].[pedidos_rechazados_2];
+TRUNCATE TABLE [dbo].[TransportesRetrasados_2];
+TRUNCATE TABLE [dbo].[PedidosEntregas_1_2];
+
+-- ============================================================================
+-- STREAM A: PEDIDOS BASE DATA PROCESSING
+-- ============================================================================
+-- Pedidos schema columns:
+--   Creado_el, Doc._venta, ClVt, Solic., Material, Denominación,
+--   Cantidad_de_pedido, UM, Volumen, UV, Util., FePrefEnt._1, Referencia,
+--   MR, SG, CreadoPor, Mon, GVen, FePrefEnt., ValorNeto, ClPed, Num_Pedido
+-- ============================================================================
+
+
+-- ============================================================================
+-- OUTPUT 1: Detalle_2
+-- ============================================================================
+;WITH Pedidos_Clean AS (
+    SELECT
+        p.[Solic.],
+        p.[Material],
+        p.[ClVt],
+        p.[GVen],
+        p.[UV],
+        p.[Util.],
+        p.[UM],
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Volumen])), ',', ''), ' ', '') AS Volumen_Clean,
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Cantidad_de_pedido])), ',', ''), ' ', '') AS Cantidaddepedido_Clean,
+        LTRIM(RTRIM(p.[FePrefEnt.])) AS [FePrefEnt],
+        p.[Doc._venta] AS [DocVenta],
+        p.[Denominación],
+        p.[CreadoPor],
+        p.[ValorNeto],
+        p.[Mon],
+        p.[ClPed],
+        p.[Num_Pedido],
+        p.[MR] AS [Motivo de Rechazo],
+        p.[SG] AS [Status_Raw],
+        p.[Creado_el],
+        RIGHT(p.[Creado_el], 2) + '-' + SUBSTRING(p.[Creado_el], 5, 2) + '-' + LEFT(p.[Creado_el], 4) AS Fecha_Str,
+        RIGHT(LTRIM(RTRIM(p.[FePrefEnt.])), 2) + '-' + SUBSTRING(LTRIM(RTRIM(p.[FePrefEnt.])), 5, 2) + '-' + LEFT(LTRIM(RTRIM(p.[FePrefEnt.])), 4) AS FechaEntrega_Str
+    FROM [dbo].[Pedidos] p
+    WHERE p.[ClVt] != 'ClVt'
+      AND p.[Doc._venta] != '4345611598'
+),
+
+Pedidos_WithDates AS (
+    SELECT
+        pc.*,
+        TRY_CAST(pc.Fecha_Str AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(pc.FechaEntrega_Str AS DATE) AS [Fecha de Entrega_date],
+        TRY_CAST(pc.Volumen_Clean AS FLOAT) AS Volumen,
+        TRY_CAST(pc.Cantidaddepedido_Clean AS FLOAT) AS Cantidaddepedido
+    FROM Pedidos_Clean pc
+),
+
+Pedidos_WithHls AS (
+    SELECT
+        pd.[Solic.],
+        CAST(pd.[Material] AS VARCHAR(5)) AS [Material],
+        pd.[ClVt],
+        pd.[Motivo de Rechazo],
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        DATEADD(DAY, 1, pd.[Fecha de Pedido]) AS [Fecha DSR],
+        (pd.Volumen / 100000.0) * ISNULL(cp.[Signo], 1) AS [Hls],
+        pd.[DocVenta],
+        pd.Cantidaddepedido,
+        pd.[GVen],
+        pd.[Status_Raw],
+        '02' AS [Month],
+        '2026' AS [Year]
+    FROM Pedidos_WithDates pd
+    LEFT JOIN [dbo].[ClasesDePedidos] cp ON pd.[ClVt] = cp.[Clase doc.ventas]
+),
+
+Pedidos_Base AS (
+    SELECT ph.*
+    FROM Pedidos_WithHls ph
+    LEFT JOIN [dbo].[EliminarMiller] em ON ph.[Material] = em.[Material]
+    WHERE em.[Material] IS NULL
+),
+
+-- ============================================================================,
+
+OrdenesTomadas AS (
+    SELECT
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS HlsOrdenesTomadas
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] NOT IN ('ZNRP', 'ZNE1')
+    GROUP BY pb.[Solic.], pb.[Material]
+),
+
+-- ============================================================================
+-- STREAM A2: Pedidos through Status/Rechazo classification
+-- ============================================================================
+Pedidos_Summarized AS (
+    SELECT
+        pb.[Fecha de Pedido],
+        pb.[Fecha de Entrega_date],
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS Sum_Hls,
+        CASE WHEN pb.[Status_Raw] = 'A' THEN 'no sumistrado' WHEN pb.[Status_Raw] = 'B' THEN 'entregar parcialmente' WHEN pb.[Status_Raw] = 'C' THEN 'concluido/a' END AS [Status],
+        pb.[Motivo de Rechazo],
+        pb.[ClVt],
+        pb.[Month],
+        pb.[Year]
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+    GROUP BY
+        pb.[Fecha de Pedido], pb.[Fecha de Entrega_date], pb.[Solic.], pb.[Material],
+        pb.[Status_Raw], pb.[Motivo de Rechazo], pb.[ClVt], pb.[Month], pb.[Year]
+),
+
+Pedidos_WithEntregaMonth AS (
+    SELECT
+        ps.*,
+        RIGHT('0' + CAST(MONTH(ps.[Fecha de Entrega_date]) AS VARCHAR(2)), 2) AS [Month Entrega],
+        CAST(YEAR(ps.[Fecha de Entrega_date]) AS VARCHAR(4)) AS [Year Entrega]
+    FROM Pedidos_Summarized ps
+),
+
+-- ============================================================================
+-- CLASSIFICATION CTEs
+-- ============================================================================
+
+HlsPendientes AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPendientes,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+),
+
+HlsPostFechados AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPostFechados,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] > CAST(GETDATE() AS DATE)
+),
+
+HlsPostFechadosMesSiguiente AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPostFechadosMesSiguiente,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND ([Year Entrega] > '2026' OR [Month Entrega] > '02')
+),
+
+HlsRechazoStockout AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazoStockout,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] = '99'
+),
+
+HlsRechazadosCredito AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazadosCredito,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] = '08'
+),
+
+HlsRechazadosOtros AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazadosOtros,
+           [Motivo de Rechazo],
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] != '99'
+      AND [Motivo de Rechazo] != '08'
+      AND ISNULL([Motivo de Rechazo], '') != ''
+),
+
+HlsReplanificados AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsReplanificados,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [ClVt] = 'ZNRP'
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+),
+
+-- ============================================================================,
+
+OOS_Entregas AS (
+    SELECT
+        oos.[Solic.],
+        oos.[Material],
+        SUM(TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(oos.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0) AS HlEntregados
+    FROM [dbo].[OOS] oos
+    WHERE oos.[Fecha_doc.] = '2024.02.28'  -- TODO: UPDATE THIS DATE PARAMETER
+    GROUP BY oos.[Solic.], oos.[Material]
+),
+
+OOS_Entregas_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(oos.[Fechadoc.], 2) + '-' + SUBSTRING(oos.[Fechadoc.], 5, 2) + '-' + LEFT(oos.[Fechadoc.], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(oos.[FePrefEnt.], 2) + '-' + SUBSTRING(oos.[FePrefEnt.], 5, 2) + '-' + LEFT(oos.[FePrefEnt.], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        oos.[Solic.],
+        oos.[Material],
+        SUM(TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(oos.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0) AS HlEntregados
+    FROM [dbo].[OOS] oos
+    WHERE oos.[Fecha_doc.] = '2024.02.28'  -- TODO: UPDATE THIS DATE PARAMETER
+    GROUP BY
+        oos.[Fechadoc.], oos.[FePrefEnt.], oos.[Solic.], oos.[Material]
+),
+
+-- ============================================================================,
+
+Transporte_Clean AS (
+    SELECT DISTINCT
+        t.[Transporte],
+        t.[Material],
+        t.[Solic.],
+        t.[Creadoel] AS [Creadoel],
+        t.[InPlanTran],
+        t.[G] AS [Status],
+        t.[ClEnt],
+        t.[Entrega],
+        TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(t.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0 AS Hls
+    FROM [dbo].[Transporte] t
+    WHERE ISNULL(t.[Material], '') != ''
+      AND t.[Material] != 'Material'
+),
+
+TransportesPendientes AS (
+    SELECT
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Material], tc.[Solic.]
+),
+
+TransportesPendientes_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados_Base AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesRetrasados
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND tc.[Status] != '7'
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados AS (
+    SELECT
+        [Fecha de Pedido],
+        [Fecha de Entrega_date],
+        [Material],
+        [Solic.],
+        CASE WHEN [Fecha de Entrega_date] = CAST(GETDATE() AS DATE) THEN 0
+             ELSE HlsTransportesRetrasados END AS HlsTransportesRetrasados
+    FROM TransportesRetrasados_Base
+),
+
+-- ============================================================================,
+
+Ventas AS (
+    SELECT
+        m.[Customer Code] AS [Solic.],
+        m.[Material],
+        SUM(m.[Sales Volume (HL) - BIL]) AS HlsVentas
+    FROM [dbo].[2018_Mes] m
+    GROUP BY m.[Customer Code], m.[Material]
+),
+
+-- ============================================================================,
+
+AllOrders_Union AS (
+    SELECT [Solic.], [Material],
+           HlsOrdenesTomadas, 0 AS HlsVentas, 0 AS HlsPendientes, 0 AS HlsReplanificados,
+           0 AS HlsPostFechados, 0 AS HlsPostFechadosMesSiguiente,
+           0 AS HlsRechazoStockout, 0 AS HlsRechazadosCredito, 0 AS HlsRechazadosOtros
+    FROM OrdenesTomadas
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, HlsPendientes, 0, 0, 0, 0, 0, 0
+    FROM HlsPendientes
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, 0, 0, HlsPostFechados, 0, 0, 0, 0
+    FROM HlsPostFechados
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, 0, 0, 0, HlsPostFechadosMesSiguiente, 0, 0, 0
+    FROM HlsPostFechadosMesSiguiente
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, 0, 0, 0, 0, HlsRechazoStockout, 0, 0
+    FROM HlsRechazoStockout
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, 0, 0, 0, 0, 0, HlsRechazadosCredito, 0
+    FROM HlsRechazadosCredito
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, 0, 0, 0, 0, 0, 0, HlsRechazadosOtros
+    FROM HlsRechazadosOtros
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, 0, 0, HlsReplanificados, 0, 0, 0, 0, 0
+    FROM HlsReplanificados
+
+    UNION ALL
+
+    SELECT [Solic.], [Material],
+           0, HlsVentas, 0, 0, 0, 0, 0, 0, 0
+    FROM Ventas
+),
+
+Orders_Summarized AS (
+    SELECT
+        [Solic.], [Material],
+        SUM(HlsOrdenesTomadas) AS HlsOrdenesTomadas,
+        SUM(HlsVentas) AS HlsVentas,
+        SUM(HlsPendientes) AS HlsPendientes,
+        SUM(HlsReplanificados) AS HlsReplanificados,
+        SUM(HlsPostFechados) AS HlsPostFechados,
+        SUM(HlsPostFechadosMesSiguiente) AS HlsPostFechadosMesSiguiente,
+        SUM(HlsRechazoStockout) AS HlsRechazoStockout,
+        SUM(HlsRechazadosCredito) AS HlsRechazadosCredito,
+        SUM(HlsRechazadosOtros) AS HlsRechazadosOtros
+    FROM AllOrders_Union
+    GROUP BY [Solic.], [Material]
+),
+
+AllMetrics AS (
+    SELECT
+        os.[Solic.], os.[Material],
+        os.HlsOrdenesTomadas,
+        os.HlsVentas,
+        os.HlsPendientes,
+        os.HlsReplanificados,
+        os.HlsPostFechados,
+        os.HlsPostFechadosMesSiguiente,
+        os.HlsRechazoStockout,
+        os.HlsRechazadosCredito,
+        os.HlsRechazadosOtros,
+        os.HlsPostFechados + os.HlsPostFechadosMesSiguiente AS HlsPostFechadosTotales,
+        ISNULL(oe.HlEntregados, 0) AS HlEntregados,
+        ISNULL(tp.HlsTransportesPendientes, 0) AS HlsTransportesPendientes
+    FROM Orders_Summarized os
+    LEFT JOIN OOS_Entregas oe ON os.[Solic.] = oe.[Solic.] AND os.[Material] = oe.[Material]
+    LEFT JOIN TransportesPendientes tp ON os.[Solic.] = tp.[Solic.] AND os.[Material] = tp.[Material]
+),
+
+AllMetrics_WithStockout AS (
+    SELECT
+        am.*,
+        am.HlsRechazoStockout - am.HlEntregados AS StockOutTotal
+    FROM AllMetrics am
+)
+
+-- ============================================================================
+
+INSERT INTO [dbo].[Detalle_2]
+SELECT
+    sqvi.[Dirección],
+    sqvi.[Región],
+    sqvi.[Gerencia],
+    sqvi.[ZV],
+    sqvi.[Ce.],
+    am.[Solic.] AS [Cliente],
+    sqvi.[Nombre 3],
+    mat.[Product Category-Global],
+    mat.[Brand-Local],
+    mat.[Capacity],
+    SUM(am.HlsOrdenesTomadas) AS HlsOrdenesTomadas,
+    SUM(am.HlsVentas) AS HlsVentas,
+    SUM(am.HlsPendientes) AS HlsPendientes,
+    SUM(am.HlsReplanificados) AS HlsReplanificados,
+    SUM(am.HlsPostFechados) AS HlsPostFechados,
+    SUM(am.HlsPostFechadosMesSiguiente) AS HlsPostFechadosMesSiguiente,
+    SUM(am.HlsRechazoStockout) AS HlsRechazoStockout,
+    SUM(am.StockOutTotal) AS StockOutTotal,
+    SUM(am.HlEntregados) AS HlEntregados,
+    SUM(am.HlsRechazadosCredito) AS HlsRechazadosCredito,
+    SUM(am.HlsRechazadosOtros) AS HlsRechazadosOtros,
+    SUM(am.HlsPostFechadosTotales) AS HlsPostFechadosTotales,
+    SUM(am.HlsTransportesPendientes) AS HlsTransportesPendientes
+
+FROM AllMetrics_WithStockout am
+INNER JOIN [dbo].[SQVI] sqvi ON am.[Solic.] = sqvi.[Cliente]
+INNER JOIN [dbo].[Materiales] mat ON am.[Material] = mat.[Material]
+GROUP BY
+    sqvi.[Dirección], sqvi.[Región], sqvi.[Gerencia], sqvi.[ZV], sqvi.[Ce.],
+    am.[Solic.], sqvi.[Nombre 3], mat.[Product Category-Global], mat.[Brand-Local], mat.[Capacity];
+
+
+-- ============================================================================
+
+
+-- ============================================================================
+-- OUTPUT 2: ResumenCategorias_2
+-- ============================================================================
+INSERT INTO [dbo].[ResumenCategorias_2]
+SELECT
+    [Dirección], [Región], [Gerencia], [ZV], [Ce.], [Product Category-Global],
+    SUM(HlsOrdenesTomadas) AS HlsOrdenesTomadas,
+    SUM(HlsVentas) AS HlsVentas,
+    SUM(HlsPendientes) AS HlsPendientes,
+    SUM(HlsReplanificados) AS HlsReplanificados,
+    SUM(StockOutTotal) AS StockOutTotal,
+    SUM(HlsRechazadosCredito) AS Sum_HlsRechazadosCredito,
+    SUM(HlsRechazadosOtros) AS Sum_HlsRechazadosOtros,
+    SUM(HlsPostFechadosTotales) AS Sum_HlsPostFechadosTotales,
+    SUM(HlsTransportesPendientes) AS Sum_HlsTransportesPendientes
+
+FROM [dbo].[Detalle_2]
+GROUP BY [Dirección], [Región], [Gerencia], [ZV], [Ce.], [Product Category-Global];
+
+
+-- ============================================================================
+
+
+-- ============================================================================
+-- OUTPUT 8: PedidosEntregas_1_2 (moved up - simple, only needs Pedidos_Base)
+-- ============================================================================
+;WITH Pedidos_Clean AS (
+    SELECT
+        p.[Solic.],
+        p.[Material],
+        p.[ClVt],
+        p.[GVen],
+        p.[UV],
+        p.[Util.],
+        p.[UM],
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Volumen])), ',', ''), ' ', '') AS Volumen_Clean,
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Cantidad_de_pedido])), ',', ''), ' ', '') AS Cantidaddepedido_Clean,
+        LTRIM(RTRIM(p.[FePrefEnt.])) AS [FePrefEnt],
+        p.[Doc._venta] AS [DocVenta],
+        p.[Denominación],
+        p.[CreadoPor],
+        p.[ValorNeto],
+        p.[Mon],
+        p.[ClPed],
+        p.[Num_Pedido],
+        p.[MR] AS [Motivo de Rechazo],
+        p.[SG] AS [Status_Raw],
+        p.[Creado_el],
+        RIGHT(p.[Creado_el], 2) + '-' + SUBSTRING(p.[Creado_el], 5, 2) + '-' + LEFT(p.[Creado_el], 4) AS Fecha_Str,
+        RIGHT(LTRIM(RTRIM(p.[FePrefEnt.])), 2) + '-' + SUBSTRING(LTRIM(RTRIM(p.[FePrefEnt.])), 5, 2) + '-' + LEFT(LTRIM(RTRIM(p.[FePrefEnt.])), 4) AS FechaEntrega_Str
+    FROM [dbo].[Pedidos] p
+    WHERE p.[ClVt] != 'ClVt'
+      AND p.[Doc._venta] != '4345611598'
+),
+
+Pedidos_WithDates AS (
+    SELECT
+        pc.*,
+        TRY_CAST(pc.Fecha_Str AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(pc.FechaEntrega_Str AS DATE) AS [Fecha de Entrega_date],
+        TRY_CAST(pc.Volumen_Clean AS FLOAT) AS Volumen,
+        TRY_CAST(pc.Cantidaddepedido_Clean AS FLOAT) AS Cantidaddepedido
+    FROM Pedidos_Clean pc
+),
+
+Pedidos_WithHls AS (
+    SELECT
+        pd.[Solic.],
+        CAST(pd.[Material] AS VARCHAR(5)) AS [Material],
+        pd.[ClVt],
+        pd.[Motivo de Rechazo],
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        DATEADD(DAY, 1, pd.[Fecha de Pedido]) AS [Fecha DSR],
+        (pd.Volumen / 100000.0) * ISNULL(cp.[Signo], 1) AS [Hls],
+        pd.[DocVenta],
+        pd.Cantidaddepedido,
+        pd.[GVen],
+        pd.[Status_Raw],
+        '02' AS [Month],
+        '2026' AS [Year]
+    FROM Pedidos_WithDates pd
+    LEFT JOIN [dbo].[ClasesDePedidos] cp ON pd.[ClVt] = cp.[Clase doc.ventas]
+),
+
+Pedidos_Base AS (
+    SELECT ph.*
+    FROM Pedidos_WithHls ph
+    LEFT JOIN [dbo].[EliminarMiller] em ON ph.[Material] = em.[Material]
+    WHERE em.[Material] IS NULL
+)
+
+-- ============================================================================
+
+INSERT INTO [dbo].[PedidosEntregas_1_2]
+SELECT
+    pb.[Fecha de Pedido],
+    pb.[Fecha de Entrega_date],
+    pb.[Solic.],
+    pb.[Material],
+    pb.[Hls],
+    CASE WHEN pb.[Status_Raw] = 'A' THEN 'no sumistrado' WHEN pb.[Status_Raw] = 'B' THEN 'entregar parcialmente' WHEN pb.[Status_Raw] = 'C' THEN 'concluido/a' END AS [Status],
+    pb.[Motivo de Rechazo],
+    pb.[ClVt],
+    pb.[Month],
+    pb.[Year],
+    pb.[DocVenta],
+    pb.[Fecha DSR]
+FROM Pedidos_Base pb;
+
+
+-- ============================================================================
+-- OUTPUT 7: TransportesRetrasados_2 (only needs Transporte_Clean)
+-- ============================================================================
+;WITH Transporte_Clean AS (
+    SELECT DISTINCT
+        t.[Transporte],
+        t.[Material],
+        t.[Solic.],
+        t.[Creadoel] AS [Creadoel],
+        t.[InPlanTran],
+        t.[G] AS [Status],
+        t.[ClEnt],
+        t.[Entrega],
+        TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(t.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0 AS Hls
+    FROM [dbo].[Transporte] t
+    WHERE ISNULL(t.[Material], '') != ''
+      AND t.[Material] != 'Material'
+),
+
+TransportesPendientes AS (
+    SELECT
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Material], tc.[Solic.]
+),
+
+TransportesPendientes_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados_Base AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesRetrasados
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND tc.[Status] != '7'
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados AS (
+    SELECT
+        [Fecha de Pedido],
+        [Fecha de Entrega_date],
+        [Material],
+        [Solic.],
+        CASE WHEN [Fecha de Entrega_date] = CAST(GETDATE() AS DATE) THEN 0
+             ELSE HlsTransportesRetrasados END AS HlsTransportesRetrasados
+    FROM TransportesRetrasados_Base
+)
+
+-- ============================================================================
+
+INSERT INTO [dbo].[TransportesRetrasados_2]
+SELECT
+    tc.[Transporte],
+    TRY_CAST(
+        RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+    AS DATE) AS [Fecha de Pedido],
+    TRY_CAST(
+        RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+    AS DATE) AS [Fecha de Entrega_date],
+    tc.[Material],
+    tc.[Solic.],
+    CASE WHEN TRY_CAST(
+        RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+    AS DATE) = CAST(GETDATE() AS DATE) THEN 0
+    ELSE SUM(tc.Hls) END AS HlsTransportesRetrasados,
+    tc.[Status],
+    tc.[Entrega],
+    tc.[ClEnt]
+FROM Transporte_Clean tc
+WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+  AND tc.[Status] != '7'
+GROUP BY
+    tc.[Transporte], tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.],
+    tc.[Status], tc.[Entrega], tc.[ClEnt];
+
+
+-- ============================================================================
+-- OUTPUT 5: concilia_pedidos_rechazados_otros_2
+-- ============================================================================
+;WITH Pedidos_Clean AS (
+    SELECT
+        p.[Solic.],
+        p.[Material],
+        p.[ClVt],
+        p.[GVen],
+        p.[UV],
+        p.[Util.],
+        p.[UM],
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Volumen])), ',', ''), ' ', '') AS Volumen_Clean,
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Cantidad_de_pedido])), ',', ''), ' ', '') AS Cantidaddepedido_Clean,
+        LTRIM(RTRIM(p.[FePrefEnt.])) AS [FePrefEnt],
+        p.[Doc._venta] AS [DocVenta],
+        p.[Denominación],
+        p.[CreadoPor],
+        p.[ValorNeto],
+        p.[Mon],
+        p.[ClPed],
+        p.[Num_Pedido],
+        p.[MR] AS [Motivo de Rechazo],
+        p.[SG] AS [Status_Raw],
+        p.[Creado_el],
+        RIGHT(p.[Creado_el], 2) + '-' + SUBSTRING(p.[Creado_el], 5, 2) + '-' + LEFT(p.[Creado_el], 4) AS Fecha_Str,
+        RIGHT(LTRIM(RTRIM(p.[FePrefEnt.])), 2) + '-' + SUBSTRING(LTRIM(RTRIM(p.[FePrefEnt.])), 5, 2) + '-' + LEFT(LTRIM(RTRIM(p.[FePrefEnt.])), 4) AS FechaEntrega_Str
+    FROM [dbo].[Pedidos] p
+    WHERE p.[ClVt] != 'ClVt'
+      AND p.[Doc._venta] != '4345611598'
+),
+
+Pedidos_WithDates AS (
+    SELECT
+        pc.*,
+        TRY_CAST(pc.Fecha_Str AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(pc.FechaEntrega_Str AS DATE) AS [Fecha de Entrega_date],
+        TRY_CAST(pc.Volumen_Clean AS FLOAT) AS Volumen,
+        TRY_CAST(pc.Cantidaddepedido_Clean AS FLOAT) AS Cantidaddepedido
+    FROM Pedidos_Clean pc
+),
+
+Pedidos_WithHls AS (
+    SELECT
+        pd.[Solic.],
+        CAST(pd.[Material] AS VARCHAR(5)) AS [Material],
+        pd.[ClVt],
+        pd.[Motivo de Rechazo],
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        DATEADD(DAY, 1, pd.[Fecha de Pedido]) AS [Fecha DSR],
+        (pd.Volumen / 100000.0) * ISNULL(cp.[Signo], 1) AS [Hls],
+        pd.[DocVenta],
+        pd.Cantidaddepedido,
+        pd.[GVen],
+        pd.[Status_Raw],
+        '02' AS [Month],
+        '2026' AS [Year]
+    FROM Pedidos_WithDates pd
+    LEFT JOIN [dbo].[ClasesDePedidos] cp ON pd.[ClVt] = cp.[Clase doc.ventas]
+),
+
+Pedidos_Base AS (
+    SELECT ph.*
+    FROM Pedidos_WithHls ph
+    LEFT JOIN [dbo].[EliminarMiller] em ON ph.[Material] = em.[Material]
+    WHERE em.[Material] IS NULL
+),
+
+-- ============================================================================,
+
+Rechazados_Otros_Stream2 AS (
+    SELECT
+        pc.[Fecha de Pedido],
+        pc.[Fecha de Entrega_date],
+        pc.[Solic.],
+        pc.[Material],
+        SUM(pc.[Hls]) AS HlsRechazadosOtros,
+        pc.[Motivo de Rechazo],
+        pc.[ClVt],
+        pc.[Month],
+        pc.[Year]
+    FROM Pedidos_Base pc
+    WHERE pc.[Status_Raw] = 'A'
+      AND pc.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+      AND pc.[Motivo de Rechazo] != '99'
+      AND pc.[Motivo de Rechazo] != '08'
+      AND ISNULL(pc.[Motivo de Rechazo], '') != ''
+    GROUP BY
+        pc.[Fecha de Pedido], pc.[Fecha de Entrega_date], pc.[Solic.], pc.[Material],
+        pc.[Motivo de Rechazo], pc.[ClVt], pc.[Month], pc.[Year]
+)
+INSERT INTO [dbo].[concilia_pedidos_rechazados_otros_2]
+SELECT *
+FROM Rechazados_Otros_Stream2;
+
+
+-- ============================================================================
+-- OUTPUT 6: pedidos_rechazados_2
+-- ============================================================================
+;WITH Pedidos_Clean AS (
+    SELECT
+        p.[Solic.],
+        p.[Material],
+        p.[ClVt],
+        p.[GVen],
+        p.[UV],
+        p.[Util.],
+        p.[UM],
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Volumen])), ',', ''), ' ', '') AS Volumen_Clean,
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Cantidad_de_pedido])), ',', ''), ' ', '') AS Cantidaddepedido_Clean,
+        LTRIM(RTRIM(p.[FePrefEnt.])) AS [FePrefEnt],
+        p.[Doc._venta] AS [DocVenta],
+        p.[Denominación],
+        p.[CreadoPor],
+        p.[ValorNeto],
+        p.[Mon],
+        p.[ClPed],
+        p.[Num_Pedido],
+        p.[MR] AS [Motivo de Rechazo],
+        p.[SG] AS [Status_Raw],
+        p.[Creado_el],
+        RIGHT(p.[Creado_el], 2) + '-' + SUBSTRING(p.[Creado_el], 5, 2) + '-' + LEFT(p.[Creado_el], 4) AS Fecha_Str,
+        RIGHT(LTRIM(RTRIM(p.[FePrefEnt.])), 2) + '-' + SUBSTRING(LTRIM(RTRIM(p.[FePrefEnt.])), 5, 2) + '-' + LEFT(LTRIM(RTRIM(p.[FePrefEnt.])), 4) AS FechaEntrega_Str
+    FROM [dbo].[Pedidos] p
+    WHERE p.[ClVt] != 'ClVt'
+      AND p.[Doc._venta] != '4345611598'
+),
+
+Pedidos_WithDates AS (
+    SELECT
+        pc.*,
+        TRY_CAST(pc.Fecha_Str AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(pc.FechaEntrega_Str AS DATE) AS [Fecha de Entrega_date],
+        TRY_CAST(pc.Volumen_Clean AS FLOAT) AS Volumen,
+        TRY_CAST(pc.Cantidaddepedido_Clean AS FLOAT) AS Cantidaddepedido
+    FROM Pedidos_Clean pc
+),
+
+Pedidos_WithHls AS (
+    SELECT
+        pd.[Solic.],
+        CAST(pd.[Material] AS VARCHAR(5)) AS [Material],
+        pd.[ClVt],
+        pd.[Motivo de Rechazo],
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        DATEADD(DAY, 1, pd.[Fecha de Pedido]) AS [Fecha DSR],
+        (pd.Volumen / 100000.0) * ISNULL(cp.[Signo], 1) AS [Hls],
+        pd.[DocVenta],
+        pd.Cantidaddepedido,
+        pd.[GVen],
+        pd.[Status_Raw],
+        '02' AS [Month],
+        '2026' AS [Year]
+    FROM Pedidos_WithDates pd
+    LEFT JOIN [dbo].[ClasesDePedidos] cp ON pd.[ClVt] = cp.[Clase doc.ventas]
+),
+
+Pedidos_Base AS (
+    SELECT ph.*
+    FROM Pedidos_WithHls ph
+    LEFT JOIN [dbo].[EliminarMiller] em ON ph.[Material] = em.[Material]
+    WHERE em.[Material] IS NULL
+),
+
+-- ============================================================================,
+
+MotivoRechazo_Lookup AS (
+    SELECT Idioma, MR, Denominacion FROM (VALUES
+        ('ES','00',N'Asignado internamente por el sistema'),
+        ('ES','01',N'Fecha de entrega demasiado tarde'),
+        ('ES','02',N'Mala calidad'),
+        ('ES','03',N'Demasiado caro'),
+        ('ES','04',N'Mejor servicio de otro oferente'),
+        ('ES','05',N'Garantia'),
+        ('ES','06',N'Pedido Join Service'),
+        ('ES','08',N'Bloqueo de Credito Tipo B'),
+        ('ES','09',N'Bloqueo de Credito Tipo C'),
+        ('ES','10',N'Pedido Excede Capacidad TP'),
+        ('ES','11',N'Envio de reemplazo para el cliente'),
+        ('ES','12',N'Limite Cupo Envases'),
+        ('ES','13',N'Drop Size Minimo'),
+        ('ES','14',N'Bloqueo de Obsequio'),
+        ('ES','15',N'Bloqueo Devolucion'),
+        ('ES','16',N'Despacho Condicionado'),
+        ('ES','17',N'Bloqueo EDI'),
+        ('ES','18',N'Bloqueo Pedido Consys'),
+        ('ES','20',N'Error en SKU'),
+        ('ES','21',N'AF-Error digitacion facturacion'),
+        ('ES','22',N'AF-Error transmision SIP-SAP'),
+        ('ES','23',N'AF-Error impresion factura'),
+        ('ES','24',N'Anul Factura x Vehiculo no entro'),
+        ('ES','50',N'Operacion por aclarar'),
+        ('ES','51',N'Cheques Rechazdos'),
+        ('ES','52',N'Reincidencia Mora'),
+        ('ES','53',N'Reincidencia Sobregiros'),
+        ('ES','54',N'Incobrables'),
+        ('ES','55',N'Financiamientos'),
+        ('ES','56',N'Suprimidos'),
+        ('ES','57',N'Juridico'),
+        ('ES','58',N'Mal Record Crediticio'),
+        ('ES','59',N'Solicitud Ventas'),
+        ('ES','60',N'Recuperacion Judicial'),
+        ('ES','61',N'Sin Venta al Credito en 3 meses'),
+        ('ES','62',N'Solicitud de Creditos'),
+        ('ES','99',N'Stock out'),
+        ('ES','AN',N'Anulacion de pedidos'),
+        ('ES','MC',N'Error en datos maestros - Coordenada'),
+        ('ES','MF',N'Error en datos maestros - Frecuencia'),
+        ('ES','MT',N'Error en datos maestros - Zona Transport'),
+        ('ES','PF',N'PFN No Gestionado'),
+        ('ES','RH',N'Redenciones Huerfanas'),
+        ('ES','RT',N'ZCO5 No Tratado'),
+        ('ES','Z1',N'Consolidado - Posicion Cerrada'),
+        ('ES','Z2',N'Anulac. de pedidos TV por correccion'),
+        ('ES','Z3',N'Restriccion logistica T3'),
+        ('ES','Z4',N'Restriccion logistica externa'),
+        ('ES','Z5',N'SV-Bloqueo pedido SalesForce'),
+        ('ES','Z6',N'Pedido cancelado por cliente B2B'),
+        ('ES','ZA',N'Restriccion logistica APT'),
+        ('ES','ZB',N'Error en facturacion'),
+        ('ES','ZC',N'Incumplimiento pre-pago del cliente'),
+        ('ES','ZD',N'Falta Registro Cliente Venta Digital'),
+        ('ES','ZE',N'EDI - Posicion Rechazada por Cantidad'),
+        ('ES','ZF',N'Fuera de frecuencia'),
+        ('ES','ZH',N'Pedido fuera de horario'),
+        ('ES','ZI',N'EDI - Diferencia en precio'),
+        ('ES','ZJ',N'No Disponibilidad'),
+        ('ES','ZL',N'Restriccion logistica'),
+        ('ES','ZM',N'Error en datos maestros'),
+        ('ES','ZO',N'Over Order'),
+        ('ES','ZP',N'Rechazo Portal de Liberacion Pedidos'),
+        ('ES','ZR',N'Pedido RECHAZADO para entrega'),
+        ('ES','ZS',N'Anulac. de pedidos TV por Stock out'),
+        ('ES','ZT',N'Anulacion de pedidos Televenta'),
+        ('ES','ZW',N'Sin Verif Credito'),
+        ('ES','ZX',N'Material Excluido')
+    ) AS t(Idioma, MR, Denominacion)
+),
+
+Pedidos_ForRejection AS (
+    SELECT
+        pb.[DocVenta],
+        pb.[Fecha de Pedido],
+        pb.[Fecha de Entrega_date],
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS Sum_Hls,
+        'no sumistrado' AS [Status],
+        pb.[Motivo de Rechazo],
+        pb.[ClVt],
+        pb.[Month],
+        pb.[Year]
+    FROM Pedidos_Base pb
+    WHERE pb.[Status_Raw] = 'A'
+      AND pb.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+    GROUP BY
+        pb.[DocVenta], pb.[Fecha de Pedido], pb.[Fecha de Entrega_date],
+        pb.[Solic.], pb.[Material], pb.[Status_Raw], pb.[Motivo de Rechazo],
+        pb.[ClVt], pb.[Month], pb.[Year]
+),
+
+Rechazo_Categories AS (
+    SELECT
+        pfr.*,
+        CASE WHEN pfr.[Motivo de Rechazo] = '99' THEN pfr.Sum_Hls ELSE 0 END AS HlsRechazoStockout,
+        CASE WHEN pfr.[Motivo de Rechazo] = '08' THEN pfr.Sum_Hls ELSE 0 END AS HlsRechazadosCredito,
+        CASE WHEN pfr.[Motivo de Rechazo] != '99' AND pfr.[Motivo de Rechazo] != '08'
+             AND ISNULL(pfr.[Motivo de Rechazo], '') != ''
+             THEN pfr.Sum_Hls ELSE 0 END AS HlsRechazadosOtros
+    FROM Pedidos_ForRejection pfr
+),
+
+Rejections_Union AS (
+    SELECT [Motivo de Rechazo] AS codigo_de_rechazo, Sum_Hls
+    FROM Rechazo_Categories
+    WHERE ISNULL([Motivo de Rechazo], '') != ''
+),
+
+Rejections_WithDesc AS (
+    SELECT
+        COALESCE(ru.codigo_de_rechazo, mr.MR) AS codigo_de_rechazo,
+        mr.Denominacion AS motivo_de_rechazo,
+        ISNULL(ru.Sum_Hls, 0) AS Sum_Hls
+    FROM Rejections_Union ru
+    FULL OUTER JOIN MotivoRechazo_Lookup mr ON ru.codigo_de_rechazo = mr.MR
+    WHERE mr.Idioma = 'ES' OR mr.Idioma IS NULL
+)
+INSERT INTO [dbo].[pedidos_rechazados_2]
+SELECT
+    codigo_de_rechazo,
+    motivo_de_rechazo,
+    SUM(Sum_Hls) AS Sum_Sum_Hls
+FROM Rejections_WithDesc
+GROUP BY codigo_de_rechazo, motivo_de_rechazo;
+
+
+-- ============================================================================
+-- OUTPUT 3: Detalle_Clientes_2
+-- ============================================================================
+;WITH Pedidos_Clean AS (
+    SELECT
+        p.[Solic.],
+        p.[Material],
+        p.[ClVt],
+        p.[GVen],
+        p.[UV],
+        p.[Util.],
+        p.[UM],
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Volumen])), ',', ''), ' ', '') AS Volumen_Clean,
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Cantidad_de_pedido])), ',', ''), ' ', '') AS Cantidaddepedido_Clean,
+        LTRIM(RTRIM(p.[FePrefEnt.])) AS [FePrefEnt],
+        p.[Doc._venta] AS [DocVenta],
+        p.[Denominación],
+        p.[CreadoPor],
+        p.[ValorNeto],
+        p.[Mon],
+        p.[ClPed],
+        p.[Num_Pedido],
+        p.[MR] AS [Motivo de Rechazo],
+        p.[SG] AS [Status_Raw],
+        p.[Creado_el],
+        RIGHT(p.[Creado_el], 2) + '-' + SUBSTRING(p.[Creado_el], 5, 2) + '-' + LEFT(p.[Creado_el], 4) AS Fecha_Str,
+        RIGHT(LTRIM(RTRIM(p.[FePrefEnt.])), 2) + '-' + SUBSTRING(LTRIM(RTRIM(p.[FePrefEnt.])), 5, 2) + '-' + LEFT(LTRIM(RTRIM(p.[FePrefEnt.])), 4) AS FechaEntrega_Str
+    FROM [dbo].[Pedidos] p
+    WHERE p.[ClVt] != 'ClVt'
+      AND p.[Doc._venta] != '4345611598'
+),
+
+Pedidos_WithDates AS (
+    SELECT
+        pc.*,
+        TRY_CAST(pc.Fecha_Str AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(pc.FechaEntrega_Str AS DATE) AS [Fecha de Entrega_date],
+        TRY_CAST(pc.Volumen_Clean AS FLOAT) AS Volumen,
+        TRY_CAST(pc.Cantidaddepedido_Clean AS FLOAT) AS Cantidaddepedido
+    FROM Pedidos_Clean pc
+),
+
+Pedidos_WithHls AS (
+    SELECT
+        pd.[Solic.],
+        CAST(pd.[Material] AS VARCHAR(5)) AS [Material],
+        pd.[ClVt],
+        pd.[Motivo de Rechazo],
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        DATEADD(DAY, 1, pd.[Fecha de Pedido]) AS [Fecha DSR],
+        (pd.Volumen / 100000.0) * ISNULL(cp.[Signo], 1) AS [Hls],
+        pd.[DocVenta],
+        pd.Cantidaddepedido,
+        pd.[GVen],
+        pd.[Status_Raw],
+        '02' AS [Month],
+        '2026' AS [Year]
+    FROM Pedidos_WithDates pd
+    LEFT JOIN [dbo].[ClasesDePedidos] cp ON pd.[ClVt] = cp.[Clase doc.ventas]
+),
+
+Pedidos_Base AS (
+    SELECT ph.*
+    FROM Pedidos_WithHls ph
+    LEFT JOIN [dbo].[EliminarMiller] em ON ph.[Material] = em.[Material]
+    WHERE em.[Material] IS NULL
+),
+
+-- ============================================================================,
+
+OrdenesTomadas AS (
+    SELECT
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS HlsOrdenesTomadas
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] NOT IN ('ZNRP', 'ZNE1')
+    GROUP BY pb.[Solic.], pb.[Material]
+),
+
+-- ============================================================================
+-- STREAM A2: Pedidos through Status/Rechazo classification
+-- ============================================================================
+Pedidos_Summarized AS (
+    SELECT
+        pb.[Fecha de Pedido],
+        pb.[Fecha de Entrega_date],
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS Sum_Hls,
+        CASE WHEN pb.[Status_Raw] = 'A' THEN 'no sumistrado' WHEN pb.[Status_Raw] = 'B' THEN 'entregar parcialmente' WHEN pb.[Status_Raw] = 'C' THEN 'concluido/a' END AS [Status],
+        pb.[Motivo de Rechazo],
+        pb.[ClVt],
+        pb.[Month],
+        pb.[Year]
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+    GROUP BY
+        pb.[Fecha de Pedido], pb.[Fecha de Entrega_date], pb.[Solic.], pb.[Material],
+        pb.[Status_Raw], pb.[Motivo de Rechazo], pb.[ClVt], pb.[Month], pb.[Year]
+),
+
+Pedidos_WithEntregaMonth AS (
+    SELECT
+        ps.*,
+        RIGHT('0' + CAST(MONTH(ps.[Fecha de Entrega_date]) AS VARCHAR(2)), 2) AS [Month Entrega],
+        CAST(YEAR(ps.[Fecha de Entrega_date]) AS VARCHAR(4)) AS [Year Entrega]
+    FROM Pedidos_Summarized ps
+),
+
+-- ============================================================================
+-- CLASSIFICATION CTEs
+-- ============================================================================
+
+HlsPendientes AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPendientes,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+),
+
+HlsPostFechados AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPostFechados,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] > CAST(GETDATE() AS DATE)
+),
+
+HlsPostFechadosMesSiguiente AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPostFechadosMesSiguiente,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND ([Year Entrega] > '2026' OR [Month Entrega] > '02')
+),
+
+HlsRechazoStockout AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazoStockout,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] = '99'
+),
+
+HlsRechazadosCredito AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazadosCredito,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] = '08'
+),
+
+HlsRechazadosOtros AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazadosOtros,
+           [Motivo de Rechazo],
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] != '99'
+      AND [Motivo de Rechazo] != '08'
+      AND ISNULL([Motivo de Rechazo], '') != ''
+),
+
+HlsReplanificados AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsReplanificados,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [ClVt] = 'ZNRP'
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+),
+
+-- ============================================================================,
+
+OOS_Entregas AS (
+    SELECT
+        oos.[Solic.],
+        oos.[Material],
+        SUM(TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(oos.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0) AS HlEntregados
+    FROM [dbo].[OOS] oos
+    WHERE oos.[Fecha_doc.] = '2024.02.28'  -- TODO: UPDATE THIS DATE PARAMETER
+    GROUP BY oos.[Solic.], oos.[Material]
+),
+
+OOS_Entregas_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(oos.[Fechadoc.], 2) + '-' + SUBSTRING(oos.[Fechadoc.], 5, 2) + '-' + LEFT(oos.[Fechadoc.], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(oos.[FePrefEnt.], 2) + '-' + SUBSTRING(oos.[FePrefEnt.], 5, 2) + '-' + LEFT(oos.[FePrefEnt.], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        oos.[Solic.],
+        oos.[Material],
+        SUM(TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(oos.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0) AS HlEntregados
+    FROM [dbo].[OOS] oos
+    WHERE oos.[Fecha_doc.] = '2024.02.28'  -- TODO: UPDATE THIS DATE PARAMETER
+    GROUP BY
+        oos.[Fechadoc.], oos.[FePrefEnt.], oos.[Solic.], oos.[Material]
+),
+
+-- ============================================================================,
+
+Transporte_Clean AS (
+    SELECT DISTINCT
+        t.[Transporte],
+        t.[Material],
+        t.[Solic.],
+        t.[Creadoel] AS [Creadoel],
+        t.[InPlanTran],
+        t.[G] AS [Status],
+        t.[ClEnt],
+        t.[Entrega],
+        TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(t.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0 AS Hls
+    FROM [dbo].[Transporte] t
+    WHERE ISNULL(t.[Material], '') != ''
+      AND t.[Material] != 'Material'
+),
+
+TransportesPendientes AS (
+    SELECT
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Material], tc.[Solic.]
+),
+
+TransportesPendientes_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados_Base AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesRetrasados
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND tc.[Status] != '7'
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados AS (
+    SELECT
+        [Fecha de Pedido],
+        [Fecha de Entrega_date],
+        [Material],
+        [Solic.],
+        CASE WHEN [Fecha de Entrega_date] = CAST(GETDATE() AS DATE) THEN 0
+             ELSE HlsTransportesRetrasados END AS HlsTransportesRetrasados
+    FROM TransportesRetrasados_Base
+),
+
+-- ============================================================================,
+
+Ordenes_Labeled AS (
+    SELECT [Solic.], [Material], 'Pendientes' AS [Órdenes], HlsPendientes AS Hls,
+           [ClVt], [Fecha de Pedido], [Fecha de Entrega_date]
+    FROM HlsPendientes
+
+    UNION ALL
+
+    SELECT [Solic.], [Material], 'Post-Fechados', HlsPostFechados,
+           [ClVt], [Fecha de Pedido], [Fecha de Entrega_date]
+    FROM HlsPostFechados
+
+    UNION ALL
+
+    SELECT [Solic.], [Material], 'Stockout Total', HlsRechazoStockout,
+           [ClVt], [Fecha de Pedido], [Fecha de Entrega_date]
+    FROM HlsRechazoStockout
+
+    UNION ALL
+
+    SELECT oe.[Solic.], oe.[Material], 'Stockout Total' AS [Órdenes], oe.HlEntregados * -1 AS Hls,
+           NULL AS [ClVt], oe.[Fecha de Pedido], oe.[Fecha de Entrega_date]
+    FROM OOS_Entregas_Detailed oe
+
+    UNION ALL
+
+    SELECT [Solic.], [Material], 'Rechazo por Crédito', HlsRechazadosCredito,
+           [ClVt], [Fecha de Pedido], [Fecha de Entrega_date]
+    FROM HlsRechazadosCredito
+
+    UNION ALL
+
+    SELECT [Solic.], [Material], 'Rechazo Otros', HlsRechazadosOtros,
+           [ClVt], [Fecha de Pedido], [Fecha de Entrega_date]
+    FROM HlsRechazadosOtros
+
+    UNION ALL
+
+    SELECT [Solic.], [Material], 'Post-Fechados Mes siguiente', HlsPostFechadosMesSiguiente,
+           [ClVt], [Fecha de Pedido], [Fecha de Entrega_date]
+    FROM HlsPostFechadosMesSiguiente
+
+    UNION ALL
+
+    SELECT tp.[Solic.], tp.[Material], 'Transportes Pendientes' AS [Órdenes],
+           tp.HlsTransportesPendientes AS Hls,
+           NULL AS [ClVt], tp.[Fecha de Pedido], tp.[Fecha de Entrega_date]
+    FROM TransportesPendientes_Detailed tp
+),
+
+Ordenes_Summ AS (
+    SELECT
+        ol.[ClVt],
+        ol.[Fecha de Pedido],
+        ol.[Fecha de Entrega_date],
+        ol.[Solic.],
+        ol.[Material],
+        ol.[Órdenes],
+        SUM(ol.Hls) AS Hls
+    FROM Ordenes_Labeled ol
+    GROUP BY ol.[ClVt], ol.[Fecha de Pedido], ol.[Fecha de Entrega_date],
+             ol.[Solic.], ol.[Material], ol.[Órdenes]
+)
+INSERT INTO [dbo].[Detalle_Clientes_2]
+SELECT
+    os.[Material],
+    os.[ClVt],
+    os.[Órdenes],
+    sqvi.[Dirección],
+    sqvi.[Región],
+    sqvi.[Gerencia],
+    sqvi.[ZV],
+    sqvi.[Ce.],
+    os.[Solic.],
+    sqvi.[Nombre 3],
+    mat.[Product Category-Global],
+    mat.[Brand-Local],
+    mat.[Capacity],
+    os.[Fecha de Pedido],
+    os.[Fecha de Entrega_date],
+    SUM(os.Hls) AS Hls
+FROM Ordenes_Summ os
+INNER JOIN [dbo].[SQVI] sqvi ON os.[Solic.] = sqvi.[Cliente]
+INNER JOIN [dbo].[Materiales] mat ON os.[Material] = mat.[Material]
+GROUP BY
+    os.[Material], os.[ClVt], os.[Órdenes],
+    sqvi.[Dirección], sqvi.[Región], sqvi.[Gerencia], sqvi.[ZV], sqvi.[Ce.],
+    os.[Solic.], sqvi.[Nombre 3], mat.[Product Category-Global], mat.[Brand-Local], mat.[Capacity],
+    os.[Fecha de Pedido], os.[Fecha de Entrega_date];
+
+
+-- ============================================================================
+
+
+-- ============================================================================
+-- OUTPUT 4: Esetatus_Pedidos_2018_M_2
+-- ============================================================================
+;WITH Pedidos_Clean AS (
+    SELECT
+        p.[Solic.],
+        p.[Material],
+        p.[ClVt],
+        p.[GVen],
+        p.[UV],
+        p.[Util.],
+        p.[UM],
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Volumen])), ',', ''), ' ', '') AS Volumen_Clean,
+        REPLACE(REPLACE(LTRIM(RTRIM(p.[Cantidad_de_pedido])), ',', ''), ' ', '') AS Cantidaddepedido_Clean,
+        LTRIM(RTRIM(p.[FePrefEnt.])) AS [FePrefEnt],
+        p.[Doc._venta] AS [DocVenta],
+        p.[Denominación],
+        p.[CreadoPor],
+        p.[ValorNeto],
+        p.[Mon],
+        p.[ClPed],
+        p.[Num_Pedido],
+        p.[MR] AS [Motivo de Rechazo],
+        p.[SG] AS [Status_Raw],
+        p.[Creado_el],
+        RIGHT(p.[Creado_el], 2) + '-' + SUBSTRING(p.[Creado_el], 5, 2) + '-' + LEFT(p.[Creado_el], 4) AS Fecha_Str,
+        RIGHT(LTRIM(RTRIM(p.[FePrefEnt.])), 2) + '-' + SUBSTRING(LTRIM(RTRIM(p.[FePrefEnt.])), 5, 2) + '-' + LEFT(LTRIM(RTRIM(p.[FePrefEnt.])), 4) AS FechaEntrega_Str
+    FROM [dbo].[Pedidos] p
+    WHERE p.[ClVt] != 'ClVt'
+      AND p.[Doc._venta] != '4345611598'
+),
+
+Pedidos_WithDates AS (
+    SELECT
+        pc.*,
+        TRY_CAST(pc.Fecha_Str AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(pc.FechaEntrega_Str AS DATE) AS [Fecha de Entrega_date],
+        TRY_CAST(pc.Volumen_Clean AS FLOAT) AS Volumen,
+        TRY_CAST(pc.Cantidaddepedido_Clean AS FLOAT) AS Cantidaddepedido
+    FROM Pedidos_Clean pc
+),
+
+Pedidos_WithHls AS (
+    SELECT
+        pd.[Solic.],
+        CAST(pd.[Material] AS VARCHAR(5)) AS [Material],
+        pd.[ClVt],
+        pd.[Motivo de Rechazo],
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        DATEADD(DAY, 1, pd.[Fecha de Pedido]) AS [Fecha DSR],
+        (pd.Volumen / 100000.0) * ISNULL(cp.[Signo], 1) AS [Hls],
+        pd.[DocVenta],
+        pd.Cantidaddepedido,
+        pd.[GVen],
+        pd.[Status_Raw],
+        '02' AS [Month],
+        '2026' AS [Year]
+    FROM Pedidos_WithDates pd
+    LEFT JOIN [dbo].[ClasesDePedidos] cp ON pd.[ClVt] = cp.[Clase doc.ventas]
+),
+
+Pedidos_Base AS (
+    SELECT ph.*
+    FROM Pedidos_WithHls ph
+    LEFT JOIN [dbo].[EliminarMiller] em ON ph.[Material] = em.[Material]
+    WHERE em.[Material] IS NULL
+),
+
+-- ============================================================================,
+
+OrdenesTomadas AS (
+    SELECT
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS HlsOrdenesTomadas
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] NOT IN ('ZNRP', 'ZNE1')
+    GROUP BY pb.[Solic.], pb.[Material]
+),
+
+-- ============================================================================
+-- STREAM A2: Pedidos through Status/Rechazo classification
+-- ============================================================================
+Pedidos_Summarized AS (
+    SELECT
+        pb.[Fecha de Pedido],
+        pb.[Fecha de Entrega_date],
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS Sum_Hls,
+        CASE WHEN pb.[Status_Raw] = 'A' THEN 'no sumistrado' WHEN pb.[Status_Raw] = 'B' THEN 'entregar parcialmente' WHEN pb.[Status_Raw] = 'C' THEN 'concluido/a' END AS [Status],
+        pb.[Motivo de Rechazo],
+        pb.[ClVt],
+        pb.[Month],
+        pb.[Year]
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+    GROUP BY
+        pb.[Fecha de Pedido], pb.[Fecha de Entrega_date], pb.[Solic.], pb.[Material],
+        pb.[Status_Raw], pb.[Motivo de Rechazo], pb.[ClVt], pb.[Month], pb.[Year]
+),
+
+Pedidos_WithEntregaMonth AS (
+    SELECT
+        ps.*,
+        RIGHT('0' + CAST(MONTH(ps.[Fecha de Entrega_date]) AS VARCHAR(2)), 2) AS [Month Entrega],
+        CAST(YEAR(ps.[Fecha de Entrega_date]) AS VARCHAR(4)) AS [Year Entrega]
+    FROM Pedidos_Summarized ps
+),
+
+-- ============================================================================
+-- CLASSIFICATION CTEs
+-- ============================================================================
+
+HlsPendientes AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPendientes,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+),
+
+HlsPostFechados AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPostFechados,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] > CAST(GETDATE() AS DATE)
+),
+
+HlsPostFechadosMesSiguiente AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsPostFechadosMesSiguiente,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND ([Year Entrega] > '2026' OR [Month Entrega] > '02')
+),
+
+HlsRechazoStockout AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazoStockout,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] = '99'
+),
+
+HlsRechazadosCredito AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazadosCredito,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] = '08'
+),
+
+HlsRechazadosOtros AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsRechazadosOtros,
+           [Motivo de Rechazo],
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND [Motivo de Rechazo] != '99'
+      AND [Motivo de Rechazo] != '08'
+      AND ISNULL([Motivo de Rechazo], '') != ''
+),
+
+HlsReplanificados AS (
+    SELECT [Solic.], [Material], Sum_Hls AS HlsReplanificados,
+           [Fecha de Pedido], [Fecha de Entrega_date], [ClVt]
+    FROM Pedidos_WithEntregaMonth
+    WHERE [Status] = 'no sumistrado'
+      AND (ISNULL([Motivo de Rechazo], '') = '')
+      AND [ClVt] = 'ZNRP'
+      AND [Month Entrega] = '02'
+      AND [Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+),
+
+-- ============================================================================,
+
+OOS_Entregas AS (
+    SELECT
+        oos.[Solic.],
+        oos.[Material],
+        SUM(TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(oos.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0) AS HlEntregados
+    FROM [dbo].[OOS] oos
+    WHERE oos.[Fecha_doc.] = '2024.02.28'  -- TODO: UPDATE THIS DATE PARAMETER
+    GROUP BY oos.[Solic.], oos.[Material]
+),
+
+OOS_Entregas_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(oos.[Fechadoc.], 2) + '-' + SUBSTRING(oos.[Fechadoc.], 5, 2) + '-' + LEFT(oos.[Fechadoc.], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(oos.[FePrefEnt.], 2) + '-' + SUBSTRING(oos.[FePrefEnt.], 5, 2) + '-' + LEFT(oos.[FePrefEnt.], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        oos.[Solic.],
+        oos.[Material],
+        SUM(TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(oos.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0) AS HlEntregados
+    FROM [dbo].[OOS] oos
+    WHERE oos.[Fecha_doc.] = '2024.02.28'  -- TODO: UPDATE THIS DATE PARAMETER
+    GROUP BY
+        oos.[Fechadoc.], oos.[FePrefEnt.], oos.[Solic.], oos.[Material]
+),
+
+-- ============================================================================,
+
+Transporte_Clean AS (
+    SELECT DISTINCT
+        t.[Transporte],
+        t.[Material],
+        t.[Solic.],
+        t.[Creadoel] AS [Creadoel],
+        t.[InPlanTran],
+        t.[G] AS [Status],
+        t.[ClEnt],
+        t.[Entrega],
+        TRY_CAST(REPLACE(REPLACE(LTRIM(RTRIM(t.[Volumen])), ',', ''), ' ', '') AS FLOAT) / 100000.0 AS Hls
+    FROM [dbo].[Transporte] t
+    WHERE ISNULL(t.[Material], '') != ''
+      AND t.[Material] != 'Material'
+),
+
+TransportesPendientes AS (
+    SELECT
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Material], tc.[Solic.]
+),
+
+TransportesPendientes_Detailed AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesPendientes
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND (tc.[Status] = '1' OR tc.[Status] = '0')
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados_Base AS (
+    SELECT
+        TRY_CAST(
+            RIGHT(tc.[Creadoel], 2) + '-' + SUBSTRING(tc.[Creadoel], 5, 2) + '-' + LEFT(tc.[Creadoel], 4)
+        AS DATE) AS [Fecha de Pedido],
+        TRY_CAST(
+            RIGHT(tc.[InPlanTran], 2) + '-' + SUBSTRING(tc.[InPlanTran], 5, 2) + '-' + LEFT(tc.[InPlanTran], 4)
+        AS DATE) AS [Fecha de Entrega_date],
+        tc.[Material],
+        tc.[Solic.],
+        SUM(tc.Hls) AS HlsTransportesRetrasados
+    FROM Transporte_Clean tc
+    WHERE (tc.[ClEnt] = 'ZNP1' OR tc.[ClEnt] = 'ZNO1')
+      AND tc.[Status] != '7'
+    GROUP BY tc.[Creadoel], tc.[InPlanTran], tc.[Material], tc.[Solic.]
+),
+
+TransportesRetrasados AS (
+    SELECT
+        [Fecha de Pedido],
+        [Fecha de Entrega_date],
+        [Material],
+        [Solic.],
+        CASE WHEN [Fecha de Entrega_date] = CAST(GETDATE() AS DATE) THEN 0
+             ELSE HlsTransportesRetrasados END AS HlsTransportesRetrasados
+    FROM TransportesRetrasados_Base
+),
+
+-- ============================================================================,
+
+VentasDiarias AS (
+    SELECT
+        d.[Customer Code] AS [Solic.],
+        d.[Material],
+        d.[Calendar Day] AS [Fecha de Entrega_date],
+        SUM(d.[Sales Volume (HL) - BIL]) AS HlsVta
+    FROM [dbo].[2018_Mes_D] d
+    GROUP BY d.[Customer Code], d.[Material], d.[Calendar Day]
+),
+
+-- ============================================================================,
+
+Facturas_Split AS (
+    SELECT
+        f.[Customer Code] AS [Solic.],
+        f.[Material],
+        f.[Calendar Day] AS [Fecha de Entrega_date],
+        CASE WHEN f.[ClFac] = 'ZND4' THEN f.[Sales Volume (HL) - BIL] ELSE 0 END AS Hls_PBE_Visibles,
+        CASE WHEN f.[ClFac] = 'ZND1' THEN f.[Sales Volume (HL) - BIL] ELSE 0 END AS Hls_PBN,
+        CASE WHEN f.[ClFac] = 'ZNSD' THEN f.[Sales Volume (HL) - BIL] ELSE 0 END AS Hls_Devoluciones_Totales,
+        CASE WHEN f.[ClFac] = 'ZNNE' THEN f.[Sales Volume (HL) - BIL] ELSE 0 END AS Hls_Devoluciones_Parciales
+    FROM [dbo].[2018_Mes_D_Fact2] f
+    WHERE f.[ClFac] IN ('ZND4', 'ZND1', 'ZNNE', 'ZNSD')
+),
+
+Facturas_Summarized AS (
+    SELECT
+        [Solic.],
+        [Material],
+        [Fecha de Entrega_date],
+        SUM(Hls_PBE_Visibles) AS Sum_Hls_PBE_Visibles,
+        SUM(Hls_PBN) AS Sum_Hls_PBN,
+        SUM(Hls_Devoluciones_Totales) AS Sum_Hls_Devoluciones_Totales,
+        SUM(Hls_Devoluciones_Parciales) AS Sum_Hls_Devoluciones_Parciales
+    FROM Facturas_Split
+    GROUP BY [Solic.], [Material], [Fecha de Entrega_date]
+),
+
+-- ============================================================================,
+
+Fact_Data AS (
+    SELECT
+        f.[Calendar Day],
+        f.[Customer Code],
+        f.[Material],
+        f.[Doc._venta] AS [DocVenta],
+        SUM(f.[Sales Volume (HL) - BIL]) AS Sum_Hls
+    FROM [dbo].[2018_Mes_D_Fact] f
+    GROUP BY f.[Calendar Day], f.[Customer Code], f.[Material], f.[Doc._venta]
+),
+
+Pedidos_ZNRP_ZNE1 AS (
+    SELECT DISTINCT [DocVenta], [Fecha de Entrega_date]
+    FROM Pedidos_Base
+    WHERE [ClVt] IN ('ZNRP', 'ZNE1')
+),
+
+EntregasAdelantadas AS (
+    SELECT
+        fd.[Calendar Day] AS [Fecha de Entrega_date],
+        fd.[Customer Code] AS [Solic.],
+        fd.[Material],
+        SUM(fd.Sum_Hls) AS EntregasAdelantadas
+    FROM Fact_Data fd
+    INNER JOIN Pedidos_ZNRP_ZNE1 pz ON fd.[DocVenta] = pz.[DocVenta]
+    WHERE pz.[Fecha de Entrega_date] > fd.[Calendar Day]
+    GROUP BY fd.[Calendar Day], fd.[Customer Code], fd.[Material]
+),
+
+-- ============================================================================,
+
+Cuota_Data AS (
+    SELECT
+        c.[Fecha] AS [Fecha de Entrega_date],
+        c.[Dirección],
+        c.[Región],
+        c.[Gerencia de Ventas] AS [Gerencia],
+        c.[Ruta] AS [ZV],
+        c.[Categoria] AS [Product Category-Global],
+        SUM(c.[Hls]) AS HlsCuota
+    FROM [dbo].[Cuota] c
+    GROUP BY c.[Fecha], c.[Dirección], c.[Región], c.[Gerencia de Ventas], c.[Ruta], c.[Categoria]
+),
+
+-- ============================================================================,
+
+Pedidos_Detailed AS (
+    SELECT
+        pb.[Fecha de Pedido],
+        pb.[Fecha de Entrega_date],
+        pb.[Solic.],
+        pb.[Material],
+        SUM(pb.[Hls]) AS [Hls],
+        CASE WHEN pb.[Status_Raw] = 'A' THEN 'no sumistrado' WHEN pb.[Status_Raw] = 'B' THEN 'entregar parcialmente' WHEN pb.[Status_Raw] = 'C' THEN 'concluido/a' END AS [Status],
+        pb.[Motivo de Rechazo],
+        pb.[ClVt],
+        pb.[Month],
+        pb.[Year]
+    FROM Pedidos_Base pb
+    WHERE pb.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+    GROUP BY
+        pb.[Fecha de Pedido], pb.[Fecha de Entrega_date], pb.[Solic.], pb.[Material],
+        pb.[Status_Raw], pb.[Motivo de Rechazo], pb.[ClVt], pb.[Month], pb.[Year]
+),
+
+Pedidos_Classified AS (
+    SELECT
+        pd.[Fecha de Pedido],
+        pd.[Fecha de Entrega_date],
+        pd.[Solic.],
+        pd.[Material],
+        pd.[ClVt],
+        pd.[Hls],
+        pd.[Status],
+        pd.[Motivo de Rechazo],
+        pd.[Month],
+        pd.[Year],
+        RIGHT('0' + CAST(MONTH(pd.[Fecha de Entrega_date]) AS VARCHAR(2)), 2) AS [Month Entrega],
+        CAST(YEAR(pd.[Fecha de Entrega_date]) AS VARCHAR(4)) AS [Year Entrega]
+    FROM Pedidos_Detailed pd
+    WHERE pd.[ClVt] IN ('ZNP1','ZNPV','ZNO1','ZNOB','ZND1','ZND3','ZNDB','ZNE1','ZNRP')
+),
+
+Pedidos_Cat_Detailed AS (
+    SELECT
+        pc.[Fecha de Pedido],
+        pc.[Fecha de Entrega_date],
+        pc.[Solic.],
+        pc.[Material],
+        pc.[ClVt],
+        CASE WHEN pc.[ClVt] NOT IN ('ZNRP', 'ZNE1') THEN pc.[Hls] ELSE 0 END AS HlsOrdenesTomadas,
+        CASE WHEN pc.[Status] = 'no sumistrado' AND ISNULL(pc.[Motivo de Rechazo], '') = ''
+             AND pc.[Month Entrega] = '02' AND pc.[Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+             THEN pc.[Hls] ELSE 0 END AS HlsPendientes,
+        CASE WHEN pc.[ClVt] = 'ZNRP' AND pc.[Status] = 'no sumistrado'
+             AND ISNULL(pc.[Motivo de Rechazo], '') = ''
+             AND pc.[Month Entrega] = '02' AND pc.[Fecha de Entrega_date] <= CAST(GETDATE() AS DATE)
+             THEN pc.[Hls] ELSE 0 END AS HlsReplanificados,
+        CASE WHEN pc.[Status] = 'no sumistrado' AND ISNULL(pc.[Motivo de Rechazo], '') = ''
+             AND pc.[Month Entrega] = '02' AND pc.[Fecha de Entrega_date] > CAST(GETDATE() AS DATE)
+             THEN pc.[Hls] ELSE 0 END AS HlsPostFechados,
+        CASE WHEN pc.[Status] = 'no sumistrado' AND ISNULL(pc.[Motivo de Rechazo], '') = ''
+             AND (pc.[Year Entrega] > '2026' OR pc.[Month Entrega] > '02')
+             THEN pc.[Hls] ELSE 0 END AS HlsPostFechadosMesSiguiente,
+        CASE WHEN pc.[Status] = 'no sumistrado' AND pc.[Motivo de Rechazo] = '99'
+             THEN pc.[Hls] ELSE 0 END AS HlsRechazoStockout,
+        CASE WHEN pc.[Status] = 'no sumistrado' AND pc.[Motivo de Rechazo] = '08'
+             THEN pc.[Hls] ELSE 0 END AS HlsRechazadosCredito,
+        CASE WHEN pc.[Status] = 'no sumistrado'
+             AND pc.[Motivo de Rechazo] != '99' AND pc.[Motivo de Rechazo] != '08'
+             AND ISNULL(pc.[Motivo de Rechazo], '') != ''
+             THEN pc.[Hls] ELSE 0 END AS HlsRechazadosOtros,
+        0 AS EntregasAdelantadas
+    FROM Pedidos_Classified pc
+),
+
+Pedidos_DateLevel AS (
+    SELECT
+        [Fecha de Pedido],
+        [Fecha de Entrega_date],
+        [Solic.],
+        [Material],
+        [ClVt],
+        SUM(HlsOrdenesTomadas) AS HlsOrdenesTomadas,
+        SUM(HlsPendientes) AS HlsPendientes,
+        SUM(HlsReplanificados) AS HlsReplanificados,
+        SUM(HlsPostFechados) AS HlsPostFechados,
+        SUM(HlsPostFechadosMesSiguiente) AS HlsPostFechadosMesSiguiente,
+        SUM(HlsRechazoStockout) AS HlsRechazoStockout,
+        SUM(HlsRechazadosCredito) AS HlsRechazadosCredito,
+        SUM(HlsRechazadosOtros) AS HlsRechazadosOtros,
+        SUM(EntregasAdelantadas) AS EntregasAdelantadas
+    FROM Pedidos_Cat_Detailed
+    GROUP BY [Fecha de Pedido], [Fecha de Entrega_date], [Solic.], [Material], [ClVt]
+),
+
+Combined_Detailed AS (
+    SELECT
+        pdl.[Fecha de Pedido],
+        pdl.[Fecha de Entrega_date],
+        pdl.[Solic.],
+        pdl.[Material],
+        pdl.[ClVt],
+        pdl.HlsOrdenesTomadas,
+        pdl.HlsPendientes,
+        pdl.HlsReplanificados,
+        pdl.HlsPostFechados,
+        pdl.HlsPostFechadosMesSiguiente,
+        pdl.HlsPostFechados + pdl.HlsPostFechadosMesSiguiente AS HlsPostFechadosTotales,
+        pdl.HlsRechazoStockout,
+        pdl.HlsRechazadosCredito,
+        pdl.HlsRechazadosOtros,
+        ISNULL(oe.HlEntregados, 0) AS HlEntregados,
+        pdl.HlsRechazoStockout - ISNULL(oe.HlEntregados, 0) AS StockOutTotal,
+        ISNULL(tp.HlsTransportesPendientes, 0) AS HlsTransportesPendientes,
+        ISNULL(vd.HlsVta, 0) AS HlsVta,
+        ISNULL(tr.HlsTransportesRetrasados, 0) AS HlsTransportesRetrasados,
+        ISNULL(ea.EntregasAdelantadas, 0) AS EntregasAdelantadas,
+        ISNULL(fs.Sum_Hls_Devoluciones_Totales, 0) AS Hls_Devoluciones_Totales,
+        ISNULL(fs.Sum_Hls_Devoluciones_Parciales, 0) AS Hls_Devoluciones_Parciales,
+        ISNULL(fs.Sum_Hls_PBN, 0) AS Hls_PBN,
+        ISNULL(fs.Sum_Hls_PBE_Visibles, 0) AS Hls_PBE_Visibles
+    FROM Pedidos_DateLevel pdl
+    LEFT JOIN OOS_Entregas_Detailed oe
+        ON pdl.[Solic.] = oe.[Solic.] AND pdl.[Material] = oe.[Material]
+        AND pdl.[Fecha de Pedido] = oe.[Fecha de Pedido] AND pdl.[Fecha de Entrega_date] = oe.[Fecha de Entrega_date]
+    LEFT JOIN TransportesPendientes_Detailed tp
+        ON pdl.[Solic.] = tp.[Solic.] AND pdl.[Material] = tp.[Material]
+        AND pdl.[Fecha de Pedido] = tp.[Fecha de Pedido] AND pdl.[Fecha de Entrega_date] = tp.[Fecha de Entrega_date]
+    LEFT JOIN VentasDiarias vd
+        ON pdl.[Solic.] = vd.[Solic.] AND pdl.[Material] = vd.[Material]
+        AND pdl.[Fecha de Entrega_date] = vd.[Fecha de Entrega_date]
+    LEFT JOIN TransportesRetrasados tr
+        ON pdl.[Solic.] = tr.[Solic.] AND pdl.[Material] = tr.[Material]
+        AND pdl.[Fecha de Pedido] = tr.[Fecha de Pedido] AND pdl.[Fecha de Entrega_date] = tr.[Fecha de Entrega_date]
+    LEFT JOIN EntregasAdelantadas ea
+        ON pdl.[Solic.] = ea.[Solic.] AND pdl.[Material] = ea.[Material]
+        AND pdl.[Fecha de Entrega_date] = ea.[Fecha de Entrega_date]
+    LEFT JOIN Facturas_Summarized fs
+        ON pdl.[Solic.] = fs.[Solic.] AND pdl.[Material] = fs.[Material]
+        AND pdl.[Fecha de Entrega_date] = fs.[Fecha de Entrega_date]
+),
+
+Esetatus_Joined AS (
+    SELECT
+        cd.[Fecha de Pedido],
+        cd.[Fecha de Entrega_date],
+        sqvi.[Dirección],
+        sqvi.[Región],
+        sqvi.[Gerencia],
+        sqvi.[ZV],
+        sqvi.[Ce.],
+        mat.[Product Category-Global],
+        cd.[ClVt],
+        SUM(cd.HlsOrdenesTomadas) AS HlsOrdenesTomadas,
+        SUM(cd.HlsPendientes) AS HlsPendientes,
+        SUM(cd.HlsReplanificados) AS HlsReplanificados,
+        SUM(cd.HlsPostFechados) AS HlsPostFechados,
+        SUM(cd.HlsPostFechadosMesSiguiente) AS HlsPostFechadosMesSiguiente,
+        SUM(cd.HlsRechazoStockout) AS HlsRechazoStockout,
+        SUM(cd.StockOutTotal) AS StockOutTotal,
+        SUM(cd.HlEntregados) AS HlEntregados,
+        SUM(cd.HlsRechazadosCredito) AS HlsRechazadosCredito,
+        SUM(cd.HlsRechazadosOtros) AS HlsRechazadosOtros,
+        SUM(cd.HlsPostFechadosTotales) AS HlsPostFechadosTotales,
+        SUM(cd.HlsTransportesPendientes) AS HlsTransportesPendientes,
+        SUM(cd.HlsVta) AS HlsVta,
+        SUM(cd.HlsTransportesRetrasados) AS HlsTransportesRetrasados,
+        SUM(cd.EntregasAdelantadas) AS EntregasAdelantadas,
+        SUM(cd.Hls_Devoluciones_Totales) AS Hls_Devoluciones_Totales,
+        SUM(cd.Hls_Devoluciones_Parciales) AS Hls_Devoluciones_Parciales,
+        SUM(cd.Hls_PBN) AS Hls_PBN,
+        SUM(cd.Hls_PBE_Visibles) AS Hls_PBE_Visibles
+    FROM Combined_Detailed cd
+    INNER JOIN [dbo].[SQVI] sqvi ON cd.[Solic.] = sqvi.[Cliente]
+    INNER JOIN [dbo].[Materiales] mat ON cd.[Material] = mat.[Material]
+    GROUP BY
+        cd.[Fecha de Pedido], cd.[Fecha de Entrega_date],
+        sqvi.[Dirección], sqvi.[Región], sqvi.[Gerencia], sqvi.[ZV], sqvi.[Ce.],
+        mat.[Product Category-Global], cd.[ClVt]
+)
+INSERT INTO [dbo].[Esetatus_Pedidos_2018_M_2]
+SELECT
+    ej.[Fecha de Entrega_date],
+    ej.[Dirección],
+    ej.[Región],
+    ej.[Gerencia],
+    ej.[ZV],
+    ej.[Ce.],
+    ej.[Product Category-Global],
+    SUM(ej.HlsOrdenesTomadas) AS HlsOrdenesTomadas,
+    0 AS TomadasENTR,
+    SUM(ej.HlsPendientes) AS HlsPendientes,
+    SUM(ej.HlsReplanificados) AS HlsReplanificados,
+    SUM(ej.HlsPostFechados) AS HlsPostFechados,
+    SUM(ej.HlsPostFechadosMesSiguiente) AS HlsPostFechadosMesSiguiente,
+    SUM(ej.HlsRechazoStockout) AS HlsRechazoStockout,
+    SUM(ej.StockOutTotal) AS StockOutTotal,
+    SUM(ej.HlEntregados) AS HlEntregados,
+    SUM(ej.HlsRechazadosCredito) AS HlsRechazadosCredito,
+    SUM(ej.HlsRechazadosOtros) AS HlsRechazadosOtros,
+    SUM(ej.HlsPostFechadosTotales) AS HlsPostFechadosTotales,
+    SUM(ej.HlsTransportesPendientes) AS HlsTransportesPendientes,
+    SUM(ej.HlsVta) AS HlsVta,
+    ISNULL(cq.HlsCuota, 0) AS HlsCuota,
+    SUM(ej.HlsTransportesRetrasados) AS HlsTransportesRetrasados,
+    SUM(ej.EntregasAdelantadas) AS EntregasAdelantadas,
+    SUM(ej.Hls_Devoluciones_Totales) AS Hls_Devoluciones_Totales,
+    SUM(ej.Hls_Devoluciones_Parciales) AS Hls_Devoluciones_Parciales,
+    SUM(ej.Hls_PBN) AS Hls_PBN,
+    SUM(ej.Hls_PBE_Visibles) AS Hls_PBE_Visibles,
+    ej.[ClVt],
+    CASE WHEN ej.[Fecha de Entrega_date] = CAST(GETDATE() AS DATE)
+         THEN SUM(ej.HlsVta) + SUM(ej.HlsTransportesPendientes)
+         ELSE SUM(ej.HlsVta) END AS HlsVta_Aj
+
+FROM Esetatus_Joined ej
+LEFT JOIN Cuota_Data cq
+    ON ej.[Fecha de Entrega_date] = cq.[Fecha de Entrega_date]
+    AND ej.[Dirección] = cq.[Dirección]
+    AND ej.[Región] = cq.[Región]
+    AND ej.[Gerencia] = cq.[Gerencia]
+    AND ej.[ZV] = cq.[ZV]
+    AND ej.[Product Category-Global] = cq.[Product Category-Global]
+GROUP BY
+    ej.[Fecha de Entrega_date], ej.[Dirección], ej.[Región], ej.[Gerencia], ej.[ZV],
+    ej.[Ce.], ej.[Product Category-Global], ej.[ClVt], cq.HlsCuota;
+
+
+-- ============================================================================
+
+
+PRINT 'Concilia_Pedidos v7 executed successfully.';
+PRINT 'Tables populated:';
+PRINT '  1. Detalle_2';
+PRINT '  2. ResumenCategorias_2';
+PRINT '  3. Detalle_Clientes_2';
+PRINT '  4. Esetatus_Pedidos_2018_M_2';
+PRINT '  5. concilia_pedidos_rechazados_otros_2';
+PRINT '  6. pedidos_rechazados_2';
+PRINT '  7. TransportesRetrasados_2';
+PRINT '  8. PedidosEntregas_1_2';
