@@ -1,0 +1,687 @@
+-- ============================================================================
+-- DSR (Daily Sales Report) SQL Translation from Alteryx Workflow
+-- VERSION v4.1 (19-nov-2026) = v4 (marzo 2026) con UN solo cambio:
+--   CAMBIO v4.1: los meses del YTD (YTD_Current / YTD_LY) ya no estan fijos en 2026.01 - 2026.02;
+--   ahora van de enero al mes anterior al actual, calculado con GETDATE().
+-- Output tables: DSR_M_2018_Reloaded_2, DSR_08_2018_Reloaded_Daily_2
+-- ============================================================================
+
+USE WarehousePanama;
+
+-- Clean up existing tables
+IF OBJECT_ID('dbo.[DSR_M_2018_Reloaded_2]', 'U') IS NOT NULL DROP TABLE dbo.[DSR_M_2018_Reloaded_2];
+IF OBJECT_ID('dbo.[DSR_08_2018_Reloaded_Daily_2]', 'U') IS NOT NULL DROP TABLE dbo.[DSR_08_2018_Reloaded_Daily_2];
+
+-- ============================================================================
+-- PART 1: DSR_M_2018_Reloaded_2 (Main DSR Report)
+-- ============================================================================
+
+;WITH
+CurrentDaySales AS (
+    SELECT [Customer Code], [Material],
+        [NTO] AS [NTODia], [Sales Volume (HL) - BIL] AS [HlsDia]
+    FROM [dbo].[2018_Mes_D]
+    WHERE [Calendar Day] = CAST(GETDATE() AS DATE)
+),
+
+LYDaySales AS (
+    SELECT [Customer Code], [Material],
+        [NTO] AS [NTODiaLY], [Sales Volume (HL) - BIL] AS [HlsDiaLY]
+    FROM [dbo].[2017_M_D]
+    WHERE [Calendar Day] = CAST(DATEADD(YEAR, -1, GETDATE()) AS DATE)
+),
+
+PedidosToday AS (
+    SELECT [Solic] AS [Customer Code], [Material], [Sum_Hls] AS [HlsPedidos]
+    FROM [dbo].[Pedidos_M_2018]
+    WHERE [Fecha DSR] = CAST(GETDATE() AS DATE)
+),
+
+CurrentMonthSales AS (
+    SELECT [Customer Code], [Material],
+        [NTO] AS [NTOMes], [Sales Volume (HL) - BIL] AS [HlsMes]
+    FROM [dbo].[2018_Mes]
+),
+
+LYMonthSales AS (
+    SELECT [Customer Code], [Material],
+        SUM([Sales Volume (HL) - BIL]) AS [Sum_HlsMesLY], SUM([NTO]) AS [Sum_NTOMesLY]
+    FROM [dbo].[2017_M_D]
+    WHERE [Calendar Day] <= CAST(DATEADD(YEAR, -1, GETDATE()) AS DATE)
+    GROUP BY [Customer Code], [Material]
+),
+
+MonthSummary AS (
+    SELECT [Customer Code], [Material],
+        ISNULL(SUM([NTOMes]), 0) AS [NTOMes], ISNULL(SUM([HlsMes]), 0) AS [HlsMes],
+        ISNULL(SUM([HlsMesLY]), 0) AS [HlsMesLY], ISNULL(SUM([NTOMesLY]), 0) AS [NTOMesLY]
+    FROM (
+        SELECT [Customer Code], [Material], [NTOMes], [HlsMes],
+               CAST(NULL AS FLOAT) AS [HlsMesLY], CAST(NULL AS FLOAT) AS [NTOMesLY]
+        FROM CurrentMonthSales
+        UNION ALL
+        SELECT [Customer Code], [Material], CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+               [Sum_HlsMesLY], [Sum_NTOMesLY]
+        FROM LYMonthSales
+    ) x
+    GROUP BY [Customer Code], [Material]
+),
+
+MonthWithYTD AS (
+    SELECT [Customer Code], [Material],
+        [NTOMes], [HlsMes], [HlsMesLY], [NTOMesLY],
+        [HlsMes] AS [HlsYTD], [NTOMes] AS [NTOYTD],
+        [HlsMesLY] AS [HlsYTDLY], [NTOMesLY] AS [NTOYTDLY]
+    FROM MonthSummary
+),
+
+-- CAMBIO v4.1: antes  between FORMAT(GETDATE(), '2026.01') and FORMAT(GETDATE(), '2026.02')
+YTD_Current AS (
+    SELECT [Customer Code], [Material],
+        SUM([Sales Volume (HL) - BIL]) AS [HlsYTD], SUM([NTO]) AS [NTOYTD]
+    FROM [dbo].[Esqueleto_2017_2018_c_NTO]
+    WHERE [Calendar Month] BETWEEN FORMAT(GETDATE(), 'yyyy') + '.01'
+                               AND FORMAT(DATEADD(MONTH, -1, GETDATE()), 'yyyy.MM')
+    GROUP BY [Customer Code], [Material]
+),
+
+-- CAMBIO v4.1: antes  between FORMAT(DATEADD(YEAR, -1, GETDATE()), '2025.01') and FORMAT(GETDATE(), '2025.02')
+YTD_LY AS (
+    SELECT [Customer Code], [Material],
+        SUM([Sales Volume (HL) - BIL]) AS [HlsYTDLY], SUM([NTO]) AS [NTOYTDLY]
+    FROM [dbo].[Esqueleto_2017_2018_c_NTO]
+    WHERE [Calendar Month] BETWEEN FORMAT(DATEADD(YEAR, -1, GETDATE()), 'yyyy') + '.01'
+                               AND FORMAT(DATEADD(MONTH, -1, DATEADD(YEAR, -1, GETDATE())), 'yyyy.MM')
+    GROUP BY [Customer Code], [Material]
+),
+
+EsqueletoYTD AS (
+    SELECT [Customer Code], [Material],
+        ISNULL(SUM([HlsYTD]), 0) AS [HlsYTD], ISNULL(SUM([NTOYTD]), 0) AS [NTOYTD],
+        ISNULL(SUM([HlsYTDLY]), 0) AS [HlsYTDLY], ISNULL(SUM([NTOYTDLY]), 0) AS [NTOYTDLY]
+    FROM (
+        SELECT [Customer Code], [Material], [HlsYTD], [NTOYTD],
+               CAST(NULL AS FLOAT) AS [HlsYTDLY], CAST(NULL AS FLOAT) AS [NTOYTDLY]
+        FROM YTD_Current
+        UNION ALL
+        SELECT [Customer Code], [Material], CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+               [HlsYTDLY], [NTOYTDLY]
+        FROM YTD_LY
+    ) x
+    GROUP BY [Customer Code], [Material]
+),
+
+AllStreams_Unioned AS (
+    SELECT [Customer Code], [Material],
+           [NTODia], [HlsDia],
+           CAST(NULL AS FLOAT) AS [NTODiaLY], CAST(NULL AS FLOAT) AS [HlsDiaLY],
+           CAST(NULL AS FLOAT) AS [HlsPedidos],
+           CAST(NULL AS FLOAT) AS [NTOMes], CAST(NULL AS FLOAT) AS [HlsMes],
+           CAST(NULL AS FLOAT) AS [NTOMesLY], CAST(NULL AS FLOAT) AS [HlsMesLY],
+           CAST(NULL AS FLOAT) AS [NTOYTD], CAST(NULL AS FLOAT) AS [HlsYTD],
+           CAST(NULL AS FLOAT) AS [NTOYTDLY], CAST(NULL AS FLOAT) AS [HlsYTDLY]
+    FROM CurrentDaySales
+    UNION ALL
+    SELECT [Customer Code], [Material],
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           [NTODiaLY], [HlsDiaLY], CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT)
+    FROM LYDaySales
+    UNION ALL
+    SELECT [Customer Code], [Material],
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), [HlsPedidos],
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT)
+    FROM PedidosToday
+    UNION ALL
+    SELECT [Customer Code], [Material],
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           [NTOMes], [HlsMes], [NTOMesLY], [HlsMesLY],
+           [NTOYTD], [HlsYTD], [NTOYTDLY], [HlsYTDLY]
+    FROM MonthWithYTD
+    UNION ALL
+    SELECT [Customer Code], [Material],
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+           [NTOYTD], [HlsYTD], [NTOYTDLY], [HlsYTDLY]
+    FROM EsqueletoYTD
+),
+
+Metrics_Summarized AS (
+    SELECT [Customer Code], [Material],
+        SUM([NTODia]) AS [NTODia], SUM([HlsDia]) AS [HlsDia],
+        SUM([HlsDiaLY]) AS [HlsDiaLY], SUM([NTODiaLY]) AS [NTODiaLY],
+        SUM([HlsPedidos]) AS [HlsPedidos], SUM([HlsMesLY]) AS [HlsMesLY],
+        SUM([NTOMesLY]) AS [NTOMesLY], SUM([NTOMes]) AS [NTOMes],
+        SUM([HlsMes]) AS [HlsMes], SUM([HlsYTD]) AS [HlsYTD],
+        SUM([NTOYTD]) AS [NTOYTD], SUM([HlsYTDLY]) AS [HlsYTDLY],
+        SUM([NTOYTDLY]) AS [NTOYTDLY]
+    FROM AllStreams_Unioned
+    GROUP BY [Customer Code], [Material]
+),
+
+Metrics_Cleaned AS (
+    SELECT [Customer Code], [Material],
+        ISNULL([NTODia], 0) AS [NTODia], ISNULL([HlsDia], 0) AS [HlsDia],
+        ISNULL([HlsDiaLY], 0) AS [HlsDiaLY], ISNULL([NTODiaLY], 0) AS [NTODiaLY],
+        ISNULL([HlsPedidos], 0) AS [HlsPedidos], ISNULL([HlsMesLY], 0) AS [HlsMesLY],
+        ISNULL([NTOMesLY], 0) AS [NTOMesLY], ISNULL([NTOMes], 0) AS [NTOMes],
+        ISNULL([HlsMes], 0) AS [HlsMes], ISNULL([HlsYTDLY], 0) AS [HlsYTDLY],
+        ISNULL([NTOYTDLY], 0) AS [NTOYTDLY], ISNULL([HlsYTD], 0) AS [HlsYTD],
+        ISNULL([NTOYTD], 0) AS [NTOYTD]
+    FROM Metrics_Summarized
+),
+
+SQVI_Prepared AS (
+    SELECT TRY_CAST([Cliente] AS INT) AS [Cliente],
+        [Canal], [Nombre 1] AS [Centro], [Dirección], [Región],
+        [Gerencia], [ZV] AS [Ruta], '' AS Televendedor
+    FROM [dbo].[SQVI]
+),
+
+Materiales_Prepared AS (
+    SELECT [Material], [SKU-Local Name],
+        [Product Category-Global] AS [Categoria], [Category Group],
+        [Brand-Local], [Capacity], [Pack Group]
+    FROM [dbo].[Materiales]
+),
+
+WithCustomer AS (
+    SELECT s.[Ruta], s.[Dirección], s.[Región], s.[Gerencia], s.[Canal],
+        s.[Centro], s.[Televendedor], m.*
+    FROM Metrics_Cleaned m
+    LEFT JOIN SQVI_Prepared s ON m.[Customer Code] = s.[Cliente]
+),
+
+WithMateriales AS (
+    SELECT wc.[Ruta], wc.[Dirección], wc.[Región], wc.[Gerencia], wc.[Canal],
+        wc.[Televendedor], wc.[Centro], wc.[Customer Code], wc.[Material],
+        mp.[Categoria], mp.[Category Group], mp.[Brand-Local], mp.[Capacity],
+        mp.[Pack Group], mp.[SKU-Local Name],
+        wc.[NTODia], wc.[HlsDia], wc.[NTODiaLY], wc.[HlsDiaLY], wc.[HlsPedidos],
+        wc.[NTOMes], wc.[HlsMes], wc.[NTOMesLY], wc.[HlsMesLY],
+        wc.[NTOYTD], wc.[HlsYTD], wc.[NTOYTDLY], wc.[HlsYTDLY]
+    FROM WithCustomer wc
+    INNER JOIN Materiales_Prepared mp ON wc.[Material] = mp.[Material]
+),
+
+FirstSummarize AS (
+    SELECT [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [SKU-Local Name], [Pack Group], [Centro], [Category Group], [Televendedor],
+        SUM([NTODia]) AS [NTODia], SUM([HlsDia]) AS [HlsDia],
+        SUM([HlsDiaLY]) AS [HlsDiaLY], SUM([NTODiaLY]) AS [NTODiaLY],
+        SUM([HlsPedidos]) AS [HlsPedidos], SUM([HlsMesLY]) AS [HlsMesLY],
+        SUM([NTOMesLY]) AS [NTOMesLY], SUM([NTOMes]) AS [NTOMes],
+        SUM([HlsMes]) AS [HlsMes], SUM([HlsYTD]) AS [HlsYTD],
+        SUM([NTOYTD]) AS [NTOYTD], SUM([HlsYTDLY]) AS [HlsYTDLY],
+        SUM([NTOYTDLY]) AS [NTOYTDLY]
+    FROM WithMateriales
+    GROUP BY [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [SKU-Local Name], [Pack Group], [Centro], [Category Group], [Televendedor]
+),
+
+-- ============================================================================
+-- FIX v4: QUOTA DATA - Now pulling ALL dimensions from Cuota directly
+-- No more Materiales join needed for quotas
+-- ============================================================================
+HlsDiaMeta AS (
+    SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
+        [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
+        [Pack Group], [Category Group], [SKU-Local Name], [Codigo] AS [Material],
+        SUM([Hls]) AS [HlsDiaMeta]
+    FROM [dbo].[Cuota]
+    WHERE [Fecha] = CAST(GETDATE() AS DATE)
+    GROUP BY [Canal], [Dirección], [Región], [Gerencia de Ventas], [Ruta], [Centro],
+        [Televendedor], [Categoria], [Brand-Local], [Capacity], [Pack Group],
+        [Category Group], [SKU-Local Name], [Codigo]
+),
+
+NTODiaMeta AS (
+    SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
+        [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
+        [Pack Group], [Category Group], [SKU-Local Name], [Codigo] AS [Material],
+        SUM([NTO]) AS [NTODiaMeta]
+    FROM [dbo].[Cuota]
+    WHERE [Fecha] = CAST(GETDATE() AS DATE)
+    GROUP BY [Canal], [Dirección], [Región], [Gerencia de Ventas], [Ruta], [Centro],
+        [Televendedor], [Categoria], [Brand-Local], [Capacity], [Pack Group],
+        [Category Group], [SKU-Local Name], [Codigo]
+),
+
+HlsMesMeta AS (
+    SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
+        [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
+        [Pack Group], [Category Group], [SKU-Local Name], [Codigo] AS [Material],
+        SUM([Hls]) AS [HlsMesMeta]
+    FROM [dbo].[Cuota]
+    WHERE [Fecha] <= CAST(GETDATE() AS DATE)
+      AND MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE())
+    GROUP BY [Canal], [Dirección], [Región], [Gerencia de Ventas], [Ruta], [Centro],
+        [Televendedor], [Categoria], [Brand-Local], [Capacity], [Pack Group],
+        [Category Group], [SKU-Local Name], [Codigo]
+),
+
+HlsMesMetaTotal AS (
+    SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
+        [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
+        [Pack Group], [Category Group], [SKU-Local Name], [Codigo] AS [Material],
+        SUM([Hls]) AS [HlsMetaTotal]
+    FROM [dbo].[Cuota]
+    WHERE MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE())
+    GROUP BY [Canal], [Dirección], [Región], [Gerencia de Ventas], [Ruta], [Centro],
+        [Televendedor], [Categoria], [Brand-Local], [Capacity], [Pack Group],
+        [Category Group], [SKU-Local Name], [Codigo]
+),
+
+NTOMesMeta AS (
+    SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
+        [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
+        [Pack Group], [Category Group], [SKU-Local Name], [Codigo] AS [Material],
+        SUM([NTO]) AS [NTOMesMeta]
+    FROM [dbo].[Cuota]
+    WHERE [Fecha] <= CAST(GETDATE() AS DATE)
+      AND MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE())
+    GROUP BY [Canal], [Dirección], [Región], [Gerencia de Ventas], [Ruta], [Centro],
+        [Televendedor], [Categoria], [Brand-Local], [Capacity], [Pack Group],
+        [Category Group], [SKU-Local Name], [Codigo]
+),
+
+NTOMesMetaTotal AS (
+    SELECT [Canal], [Dirección], [Región], [Gerencia de Ventas] AS [Gerencia],
+        [Ruta], [Centro], [Televendedor], [Categoria], [Brand-Local], [Capacity],
+        [Pack Group], [Category Group], [SKU-Local Name], [Codigo] AS [Material],
+        SUM([NTO]) AS [NTOMesMetaTotal]
+    FROM [dbo].[Cuota]
+    WHERE MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE())
+    GROUP BY [Canal], [Dirección], [Región], [Gerencia de Ventas], [Ruta], [Centro],
+        [Televendedor], [Categoria], [Brand-Local], [Capacity], [Pack Group],
+        [Category Group], [SKU-Local Name], [Codigo]
+),
+
+-- Union all 6 quota streams with full dimensions
+QuotaUnioned AS (
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        [HlsDiaMeta], CAST(NULL AS FLOAT) AS [NTODiaMeta],
+        CAST(NULL AS FLOAT) AS [HlsMesMeta], CAST(NULL AS FLOAT) AS [HlsMetaTotal],
+        CAST(NULL AS FLOAT) AS [NTOMesMeta], CAST(NULL AS FLOAT) AS [NTOMesMetaTotal]
+    FROM HlsDiaMeta
+    UNION ALL
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        CAST(NULL AS FLOAT), [NTODiaMeta], CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT)
+    FROM NTODiaMeta
+    UNION ALL
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), [HlsMesMeta], CAST(NULL AS FLOAT),
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT)
+    FROM HlsMesMeta
+    UNION ALL
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), [HlsMetaTotal],
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT)
+    FROM HlsMesMetaTotal
+    UNION ALL
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+        [NTOMesMeta], CAST(NULL AS FLOAT)
+    FROM NTOMesMeta
+    UNION ALL
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+        CAST(NULL AS FLOAT), [NTOMesMetaTotal]
+    FROM NTOMesMetaTotal
+),
+
+-- Summarize quotas by ALL dimension fields
+QuotaSummarized AS (
+    SELECT [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material],
+        ISNULL(SUM([HlsDiaMeta]), 0) AS [HlsDiaMeta],
+        ISNULL(SUM([NTODiaMeta]), 0) AS [NTODiaMeta],
+        ISNULL(SUM([HlsMesMeta]), 0) AS [HlsMesMeta],
+        ISNULL(SUM([HlsMetaTotal]), 0) AS [HlsMetaTotal],
+        ISNULL(SUM([NTOMesMeta]), 0) AS [NTOMesMeta],
+        ISNULL(SUM([NTOMesMetaTotal]), 0) AS [NTOMesMetaTotal]
+    FROM QuotaUnioned
+    GROUP BY [Canal],[Dirección],[Región],[Gerencia],[Ruta],[Centro],[Televendedor],
+        [Categoria],[Brand-Local],[Capacity],[Pack Group],[Category Group],[SKU-Local Name],[Material]
+),
+
+-- UNION main data with quotas (quotas now have full dimensions from Cuota table)
+MainDataForUnion AS (
+    SELECT [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [SKU-Local Name], [Pack Group], [Centro], [Category Group], [Televendedor],
+        [NTODia], [HlsDia], [HlsDiaLY], [NTODiaLY], [HlsPedidos],
+        [HlsMesLY], [NTOMesLY], [NTOMes], [HlsMes],
+        [HlsYTD], [NTOYTD], [HlsYTDLY], [NTOYTDLY],
+        CAST(NULL AS FLOAT) AS [HlsDiaMeta], CAST(NULL AS FLOAT) AS [NTODiaMeta],
+        CAST(NULL AS FLOAT) AS [HlsMesMeta], CAST(NULL AS FLOAT) AS [HlsMetaTotal],
+        CAST(NULL AS FLOAT) AS [NTOMesMeta], CAST(NULL AS FLOAT) AS [NTOMesMetaTotal]
+    FROM FirstSummarize
+),
+
+QuotaForUnion AS (
+    SELECT [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [SKU-Local Name], [Pack Group], [Centro], [Category Group], [Televendedor],
+        CAST(NULL AS FLOAT) AS [NTODia], CAST(NULL AS FLOAT) AS [HlsDia],
+        CAST(NULL AS FLOAT) AS [HlsDiaLY], CAST(NULL AS FLOAT) AS [NTODiaLY],
+        CAST(NULL AS FLOAT) AS [HlsPedidos], CAST(NULL AS FLOAT) AS [HlsMesLY],
+        CAST(NULL AS FLOAT) AS [NTOMesLY], CAST(NULL AS FLOAT) AS [NTOMes],
+        CAST(NULL AS FLOAT) AS [HlsMes], CAST(NULL AS FLOAT) AS [HlsYTD],
+        CAST(NULL AS FLOAT) AS [NTOYTD], CAST(NULL AS FLOAT) AS [HlsYTDLY],
+        CAST(NULL AS FLOAT) AS [NTOYTDLY],
+        [HlsDiaMeta], [NTODiaMeta], [HlsMesMeta], [HlsMetaTotal],
+        [NTOMesMeta], [NTOMesMetaTotal]
+    FROM QuotaSummarized
+),
+
+DataAndQuotaUnioned AS (
+    SELECT * FROM MainDataForUnion
+    UNION ALL
+    SELECT * FROM QuotaForUnion
+),
+
+FinalSummary AS (
+    SELECT [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [Pack Group], [SKU-Local Name], [Centro], [Category Group], [Televendedor],
+        SUM([NTODia]) AS [Sum_NTODia], SUM([HlsDia]) AS [Sum_HlsDia],
+        SUM([HlsDiaLY]) AS [Sum_HlsDiaLY], SUM([NTODiaLY]) AS [Sum_NTODiaLY],
+        SUM([HlsPedidos]) AS [Sum_HlsPedidos], SUM([HlsMesLY]) AS [Sum_HlsMesLY],
+        SUM([NTOMesLY]) AS [Sum_NTOMesLY], SUM([NTOMes]) AS [Sum_NTOMes],
+        SUM([HlsMes]) AS [Sum_HlsMes], SUM([HlsYTD]) AS [Sum_HlsYTD],
+        SUM([NTOYTD]) AS [Sum_NTOYTD], SUM([HlsYTDLY]) AS [Sum_HlsYTDLY],
+        SUM([NTOYTDLY]) AS [Sum_NTOYTDLY],
+        SUM([HlsDiaMeta]) AS [Sum_HlsDiaMeta], SUM([NTODiaMeta]) AS [Sum_NTODiaMeta],
+        SUM([HlsMesMeta]) AS [Sum_HlsMesMeta], SUM([HlsMetaTotal]) AS [Sum_HlsMetaTotal],
+        SUM([NTOMesMeta]) AS [Sum_NTOMesMeta], SUM([NTOMesMetaTotal]) AS [Sum_NTOMesMetaTotal]
+    FROM DataAndQuotaUnioned
+    GROUP BY [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [Pack Group], [SKU-Local Name], [Centro], [Category Group], [Televendedor]
+),
+
+FinalSummaryCleaned AS (
+    SELECT [Ruta], [Dirección], [Región], [Gerencia], [Canal],
+        [Categoria], [Brand-Local], [Capacity], [Material],
+        [Pack Group], [SKU-Local Name], [Centro], [Category Group], [Televendedor],
+        ISNULL([Sum_NTODia], 0) AS [Sum_NTODia], ISNULL([Sum_HlsDia], 0) AS [Sum_HlsDia],
+        ISNULL([Sum_HlsDiaLY], 0) AS [Sum_HlsDiaLY], ISNULL([Sum_NTODiaLY], 0) AS [Sum_NTODiaLY],
+        ISNULL([Sum_HlsPedidos], 0) AS [Sum_HlsPedidos], ISNULL([Sum_HlsMesLY], 0) AS [Sum_HlsMesLY],
+        ISNULL([Sum_NTOMesLY], 0) AS [Sum_NTOMesLY], ISNULL([Sum_NTOMes], 0) AS [Sum_NTOMes],
+        ISNULL([Sum_HlsMes], 0) AS [Sum_HlsMes], ISNULL([Sum_HlsYTD], 0) AS [Sum_HlsYTD],
+        ISNULL([Sum_NTOYTD], 0) AS [Sum_NTOYTD], ISNULL([Sum_HlsYTDLY], 0) AS [Sum_HlsYTDLY],
+        ISNULL([Sum_NTOYTDLY], 0) AS [Sum_NTOYTDLY],
+        ISNULL([Sum_HlsDiaMeta], 0) AS [Sum_HlsDiaMeta], ISNULL([Sum_NTODiaMeta], 0) AS [Sum_NTODiaMeta],
+        ISNULL([Sum_HlsMesMeta], 0) AS [Sum_HlsMesMeta], ISNULL([Sum_HlsMetaTotal], 0) AS [Sum_HlsMetaTotal],
+        ISNULL([Sum_NTOMesMeta], 0) AS [Sum_NTOMesMeta], ISNULL([Sum_NTOMesMetaTotal], 0) AS [Sum_NTOMesMetaTotal]
+    FROM FinalSummary
+),
+
+TradingDays AS (
+    SELECT
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE())
+                  AND [Fecha] <= CAST(GETDATE() AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month Current],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(GETDATE()) AND YEAR([Fecha]) = YEAR(GETDATE())
+                 THEN [DC01] ELSE 0 END) AS [TD Month],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR, -1, GETDATE()))
+                  AND YEAR([Fecha]) = YEAR(DATEADD(YEAR, -1, GETDATE()))
+                  AND [Fecha] <= CAST(DATEADD(YEAR, -1, GETDATE()) AS DATE) THEN [DC01] ELSE 0 END) AS [TD Month LY Current],
+        SUM(CASE WHEN MONTH([Fecha]) = MONTH(DATEADD(YEAR, -1, GETDATE()))
+                  AND YEAR([Fecha]) = YEAR(DATEADD(YEAR, -1, GETDATE()))
+                 THEN [DC01] ELSE 0 END) AS [TD Month LY]
+    FROM [dbo].[Trading Days F18]
+),
+
+WithTradingDays AS (
+    SELECT fs.*, td.[TD Month Current], td.[TD Month], td.[TD Month LY Current], td.[TD Month LY]
+    FROM FinalSummaryCleaned fs CROSS JOIN TradingDays td
+),
+
+-- KPI Split
+KPI_Hls AS (
+    SELECT [Ruta],[Dirección],[Región],[Gerencia],[Canal],[Categoria],
+        [Brand-Local],[Capacity],[Material],[Pack Group],[SKU-Local Name],
+        [Centro],[Category Group],[Televendedor], 'Hls' AS [KPI],
+        [Sum_HlsDia] AS [Dia], [Sum_HlsDiaLY] AS [DiaLY], [Sum_HlsPedidos] AS [Pedidos],
+        [Sum_HlsMesLY] AS [MesLY], [Sum_HlsMes] AS [Mes],
+        [Sum_HlsYTD] AS [YTD], [Sum_HlsYTDLY] AS [YTDLY],
+        [Sum_HlsDiaMeta] AS [DiaMeta], [Sum_HlsMesMeta] AS [MesMeta], [Sum_HlsMetaTotal] AS [MesMetaTotal],
+        CAST(NULL AS FLOAT) AS [NTODia], CAST(NULL AS FLOAT) AS [NTODiaLY],
+        CAST(NULL AS FLOAT) AS [NTOMesLY], CAST(NULL AS FLOAT) AS [NTOMes],
+        CAST(NULL AS FLOAT) AS [NTOYTD], CAST(NULL AS FLOAT) AS [NTOYTDLY],
+        CAST(NULL AS FLOAT) AS [NTOMesMeta], CAST(NULL AS FLOAT) AS [NTOMesMetaTotal],
+        CAST(NULL AS FLOAT) AS [NTODiaMeta],
+        [TD Month Current],[TD Month],[TD Month LY Current],[TD Month LY]
+    FROM WithTradingDays
+),
+
+KPI_NTO AS (
+    SELECT [Ruta],[Dirección],[Región],[Gerencia],[Canal],[Categoria],
+        [Brand-Local],[Capacity],[Material],[Pack Group],[SKU-Local Name],
+        [Centro],[Category Group],[Televendedor], 'NTO' AS [KPI],
+        [Sum_NTODia] AS [Dia], [Sum_NTODiaLY] AS [DiaLY], CAST(NULL AS FLOAT) AS [Pedidos],
+        [Sum_NTOMesLY] AS [MesLY], [Sum_NTOMes] AS [Mes],
+        [Sum_NTOYTD] AS [YTD], [Sum_NTOYTDLY] AS [YTDLY],
+        [Sum_NTODiaMeta] AS [DiaMeta], [Sum_NTOMesMeta] AS [MesMeta], [Sum_NTOMesMetaTotal] AS [MesMetaTotal],
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+        CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT), CAST(NULL AS FLOAT),
+        CAST(NULL AS FLOAT),
+        [TD Month Current],[TD Month],[TD Month LY Current],[TD Month LY]
+    FROM WithTradingDays
+),
+
+KPI_NTOHls AS (
+    SELECT [Ruta],[Dirección],[Región],[Gerencia],[Canal],[Categoria],
+        [Brand-Local],[Capacity],[Material],[Pack Group],[SKU-Local Name],
+        [Centro],[Category Group],[Televendedor], 'NTO/Hls' AS [KPI],
+        [Sum_HlsDia] AS [Dia], [Sum_HlsDiaLY] AS [DiaLY], [Sum_HlsPedidos] AS [Pedidos],
+        [Sum_HlsMesLY] AS [MesLY], [Sum_HlsMes] AS [Mes],
+        [Sum_HlsYTD] AS [YTD], [Sum_HlsYTDLY] AS [YTDLY],
+        [Sum_HlsDiaMeta] AS [DiaMeta], [Sum_HlsMesMeta] AS [MesMeta], [Sum_HlsMetaTotal] AS [MesMetaTotal],
+        [Sum_NTODia] AS [NTODia], [Sum_NTODiaLY] AS [NTODiaLY],
+        [Sum_NTOMesLY] AS [NTOMesLY], [Sum_NTOMes] AS [NTOMes],
+        [Sum_NTOYTD] AS [NTOYTD], [Sum_NTOYTDLY] AS [NTOYTDLY],
+        [Sum_NTOMesMeta] AS [NTOMesMeta], [Sum_NTOMesMetaTotal] AS [NTOMesMetaTotal],
+        [Sum_NTODiaMeta] AS [NTODiaMeta],
+        [TD Month Current],[TD Month],[TD Month LY Current],[TD Month LY]
+    FROM WithTradingDays
+),
+
+AllKPIs AS (
+    SELECT * FROM KPI_Hls UNION ALL SELECT * FROM KPI_NTO UNION ALL SELECT * FROM KPI_NTOHls
+),
+
+WithCalculations AS (
+    SELECT *,
+        CASE WHEN [TD Month Current] > 0 THEN [Mes] / [TD Month Current] ELSE 0 END AS [xDia],
+        CASE WHEN [TD Month LY Current] > 0 THEN [MesLY] / [TD Month LY Current] ELSE 0 END AS [xDíaLY],
+        CASE WHEN [TD Month Current] > 0
+             THEN [Mes] + ([TD Month] - [TD Month Current]) * ([Mes] / [TD Month Current])
+             ELSE [Mes] END AS [Cumplimiento Proyectado],
+        [MesMetaTotal] - [Mes] AS [Falta para Meta],
+        CASE WHEN ([TD Month] - [TD Month Current]) = 0
+             THEN [MesMetaTotal] - [Mes]
+             ELSE ([MesMetaTotal] - [Mes]) / ([TD Month] - [TD Month Current])
+        END AS [xDía para lograr meta]
+    FROM AllKPIs
+),
+
+FinalOutput AS (
+    SELECT [Ruta],[Dirección],[Región],[Gerencia],[Canal],[Categoria],
+        [Brand-Local],[Capacity],[Material],[Pack Group],[SKU-Local Name],
+        [Centro],[Category Group],[Televendedor],[KPI],
+        [Dia],[DiaLY],[Pedidos],[MesLY],[Mes],[YTD],[YTDLY],
+        [DiaMeta],[MesMeta],[MesMetaTotal],
+        [NTODia],[NTODiaLY],[NTOMesLY],[NTOMes],[NTOYTD],[NTOYTDLY],
+        [NTOMesMeta],[NTOMesMetaTotal],[NTODiaMeta],
+        [TD Month Current],[TD Month],[TD Month LY Current],[TD Month LY],
+        [xDia],[xDíaLY],[Cumplimiento Proyectado],[Falta para Meta],[xDía para lograr meta]
+    FROM WithCalculations WHERE [KPI] = 'NTO/Hls'
+    UNION ALL
+    SELECT [Ruta],[Dirección],[Región],[Gerencia],[Canal],[Categoria],
+        [Brand-Local],[Capacity],[Material],[Pack Group],[SKU-Local Name],
+        [Centro],[Category Group],[Televendedor],[KPI],
+        ISNULL([Dia],0),ISNULL([DiaLY],0),ISNULL([Pedidos],0),ISNULL([MesLY],0),
+        ISNULL([Mes],0),ISNULL([YTD],0),ISNULL([YTDLY],0),
+        ISNULL([DiaMeta],0),ISNULL([MesMeta],0),ISNULL([MesMetaTotal],0),
+        ISNULL([NTODia],0),ISNULL([NTODiaLY],0),ISNULL([NTOMesLY],0),ISNULL([NTOMes],0),
+        ISNULL([NTOYTD],0),ISNULL([NTOYTDLY],0),
+        ISNULL([NTOMesMeta],0),ISNULL([NTOMesMetaTotal],0),ISNULL([NTODiaMeta],0),
+        [TD Month Current],[TD Month],[TD Month LY Current],[TD Month LY],
+        ISNULL([xDia],0),ISNULL([xDíaLY],0),ISNULL([Cumplimiento Proyectado],0),
+        ISNULL([Falta para Meta],0),ISNULL([xDía para lograr meta],0)
+    FROM WithCalculations WHERE [KPI] <> 'NTO/Hls'
+)
+
+SELECT * INTO [dbo].[DSR_M_2018_Reloaded_2] FROM FinalOutput;
+
+
+-- ============================================================================
+-- PART 2: DSR_08_2018_Reloaded_Daily_2 (Daily Report)
+-- ============================================================================
+
+;WITH
+Materiales_Daily AS (
+    SELECT [Material], [Product Category-Global] AS [Categoria], [Brand-Local], [Capacity]
+    FROM [dbo].[Materiales]
+),
+
+SQVI_Daily AS (
+    SELECT TRY_CAST([Cliente] AS INT) AS [Cliente],
+        [Canal], [Nombre 1] AS [Centro], [Dirección], [Región], [Gerencia], [ZV] AS [Ruta]
+    FROM [dbo].[SQVI]
+),
+
+SQVItemp_Cluster AS (
+    SELECT TRY_CAST([Cliente] AS INT) AS [Cliente], [Cluster]
+    FROM [dbo].[SQVItemp]
+),
+
+Stream_CY_Raw AS (
+    SELECT [Calendar Day], [Customer Code], [Material],
+        [Sales Volume (HL) - BIL] AS [Hls], CAST(NULL AS FLOAT) AS [HlsDiaLY], CAST(NULL AS FLOAT) AS [HlsPedidos]
+    FROM [dbo].[2018_Mes_D]
+),
+
+Stream_LY_Raw AS (
+    SELECT DATEADD(YEAR, 1, [Calendar Day]) AS [Calendar Day], [Customer Code], [Material],
+        CAST(NULL AS FLOAT) AS [Hls], [Sales Volume (HL) - BIL] AS [HlsDiaLY], CAST(NULL AS FLOAT) AS [HlsPedidos]
+    FROM [dbo].[2017_M_D]
+),
+
+Stream_Pedidos_Raw AS (
+    SELECT [Fecha DSR] AS [Calendar Day], [Solic] AS [Customer Code], [Material],
+        CAST(NULL AS FLOAT) AS [Hls], CAST(NULL AS FLOAT) AS [HlsDiaLY], [Sum_Hls] AS [HlsPedidos]
+    FROM [dbo].[Pedidos_M_2018]
+),
+
+DailyUnioned AS (
+    SELECT * FROM Stream_CY_Raw UNION ALL SELECT * FROM Stream_LY_Raw UNION ALL SELECT * FROM Stream_Pedidos_Raw
+),
+
+DailySummarized AS (
+    SELECT [Calendar Day], [Customer Code], [Material],
+        SUM([Hls]) AS [Sum_Hls], SUM([HlsDiaLY]) AS [Sum_HlsDiaLY], SUM([HlsPedidos]) AS [Sum_HlsPedidos]
+    FROM DailyUnioned GROUP BY [Calendar Day], [Customer Code], [Material]
+),
+
+WithDailyMateriales AS (
+    SELECT ds.*, md.[Categoria], md.[Brand-Local], md.[Capacity]
+    FROM DailySummarized ds INNER JOIN Materiales_Daily md ON ds.[Material] = md.[Material]
+),
+
+WithDailySQVI AS (
+    SELECT wdm.*, sq.[Ruta], sq.[Dirección], sq.[Región], sq.[Gerencia], sq.[Canal], sq.[Centro]
+    FROM WithDailyMateriales wdm LEFT JOIN SQVI_Daily sq ON wdm.[Customer Code] = sq.[Cliente]
+),
+
+WithDailyCluster AS (
+    SELECT wds.*, sc.[Cluster]
+    FROM WithDailySQVI wds LEFT JOIN SQVItemp_Cluster sc ON wds.[Customer Code] = sc.[Cliente]
+),
+
+DailyDimSummary AS (
+    SELECT [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
+        [Gerencia], [Canal], [Centro], [Capacity], [Cluster],
+        SUM([Sum_Hls]) AS [Hls], SUM([Sum_HlsDiaLY]) AS [HlsLY], SUM([Sum_HlsPedidos]) AS [HlsPedidos]
+    FROM WithDailyCluster
+    GROUP BY [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
+        [Gerencia], [Canal], [Centro], [Capacity], [Cluster]
+),
+
+-- FIX v4: Daily Cuota now includes all dimension fields from Cuota table
+Stream_Cuota_Daily AS (
+    SELECT c.[Fecha] AS [Calendar Day], c.[Categoria], c.[Brand-Local],
+        c.[Ruta], c.[Dirección], c.[Región], c.[Gerencia de Ventas] AS [Gerencia],
+        c.[Canal], c.[Centro], c.[Capacity],
+        CAST(NULL AS NVARCHAR(255)) AS [Cluster],
+        CAST(NULL AS FLOAT) AS [Hls], CAST(NULL AS FLOAT) AS [HlsLY],
+        CAST(NULL AS FLOAT) AS [HlsPedidos],
+        SUM(c.[Hls]) AS [Meta]
+    FROM [dbo].[Cuota] c
+    GROUP BY c.[Fecha], c.[Categoria], c.[Brand-Local], c.[Ruta], c.[Dirección],
+        c.[Región], c.[Gerencia de Ventas], c.[Canal], c.[Centro], c.[Capacity]
+),
+
+AllDailyUnioned AS (
+    SELECT [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección],
+        [Región], [Gerencia], [Canal], [Centro], [Capacity], [Cluster],
+        [Hls], [HlsLY], [HlsPedidos], CAST(NULL AS FLOAT) AS [Meta]
+    FROM DailyDimSummary
+    UNION ALL
+    SELECT * FROM Stream_Cuota_Daily
+),
+
+DailyFinalSummary AS (
+    SELECT [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
+        [Gerencia], [Canal], [Centro], [Capacity], [Cluster],
+        SUM([Hls]) AS [Hls], SUM([HlsLY]) AS [HlsLY],
+        SUM([HlsPedidos]) AS [HlsPedidos], SUM([Meta]) AS [Meta]
+    FROM AllDailyUnioned
+    GROUP BY [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
+        [Gerencia], [Canal], [Centro], [Capacity], [Cluster]
+),
+
+DayTranslation AS (
+    SELECT 'Friday' AS [Inglés], 'Viernes' AS [Español] UNION ALL
+    SELECT 'Saturday', 'Sábado' UNION ALL SELECT 'Sunday', 'Domingo' UNION ALL
+    SELECT 'Monday', 'Lunes' UNION ALL SELECT 'Tuesday', 'Martes' UNION ALL
+    SELECT 'Wednesday', 'Miércoles' UNION ALL SELECT 'Thursday', 'Jueves'
+),
+
+FinalDaily AS (
+    SELECT dfs.*, ISNULL(dfs.[Hls], 0) AS [Hls2], ISNULL(dfs.[HlsLY], 0) AS [HlsLY2],
+        ISNULL(dfs.[HlsPedidos], 0) AS [HlsPedidos2], ISNULL(dfs.[Meta], 0) AS [Meta2],
+        dt.[Español] AS [DiaSemana]
+    FROM DailyFinalSummary dfs LEFT JOIN DayTranslation dt ON DATENAME(WEEKDAY, dfs.[Calendar Day]) = dt.[Inglés]
+)
+
+SELECT [Calendar Day], [Categoria], [Brand-Local], [Ruta], [Dirección], [Región],
+    [Gerencia], [Canal], [Centro], [Capacity], [Cluster],
+    [Hls2] AS [Hls], [HlsLY2] AS [HlsLY], [HlsPedidos2] AS [HlsPedidos], [Meta2] AS [Meta], [DiaSemana]
+INTO [dbo].[DSR_08_2018_Reloaded_Daily_2]
+FROM FinalDaily;
+
+
+PRINT 'DSR v4.1 script executed successfully.';
+PRINT 'Tables created: DSR_M_2018_Reloaded_2, DSR_08_2018_Reloaded_Daily_2';
