@@ -70,3 +70,10 @@ SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbfa;
 SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_vttk;
 SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_likp;
 SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_lips;
+
+
+-- How VBAK is partitioned, and how big it is
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbak;
+
+-- The partition values (send me the last 10 or so)
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbak;
