@@ -34,6 +34,7 @@ Cambio de control sobre la tabla existente gld_maz_sales_sell_in.pa_invoice (Pan
 
 Hoy la tabla no refleja completamente el volumen asociado a regalías, lo que genera diferencias contra el cierre oficial de finanzas (aprox. 451 HL entre junio 2025 y octubre 2026). El equipo comercial identificó la misma diferencia en su análisis por material.
 
+set PENTAHO_JAVA_HOME=C:\path\to\jdk-11
 Alcance: ajuste de la lógica en el notebook existente (dominio Sales / Sell-in, ADF brewdat-maz-maz-sales-sellin-adf) y re-ejecución del histórico afectado. No se crean tablas ni columnas nuevas.
 
 Validación: comparación mensual de volumen (HL), GSI y NTO contra el cierre oficial, antes y después del cambio.
