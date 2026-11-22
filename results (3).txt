@@ -7,3 +7,5 @@ FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbak
 WHERE __partition_column IN ('202610', '202611') OR __partition_column IS NULL
 GROUP BY 1
 ORDER BY 1;
+
+set PENTAHO_JAVA_HOME=C:\jdk-11
