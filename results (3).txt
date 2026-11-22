@@ -1,33 +1,72 @@
--- RB4. Red Bull lines on S624100ZT0, Jan-Jun 2025: are they in pa_invoice, and with how much HL?
-WITH g AS (
-    SELECT DISTINCT refdocnr AS factura, regexp_replace(matnr, '^0+', '') AS material,
-           date_format(budat, 'yyyy-MM') AS mes, fkart
-    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
-    WHERE __partition_column BETWEEN '202501' AND '202506'
-      AND rbukrs = 'DC00' AND racct = 'S624100ZT0'
-      AND budat BETWEEN '2025-01-01' AND '2025-06-30'
+
+-- =====================================================================================
+-- Concilia Pedidos SILVER - descubrimiento antes de la nueva version (regalias nuevas + velocidad)
+-- Databricks, warehouse de Panama (brewdat-maz-sales-pa-adb-ep01-p). Correr una por una y pegarme los resultados.
+-- =====================================================================================
+
+
+-- =====================================================================================
+-- A. REGALIAS NUEVAS (ZNO3) DESDE LAS FACTURAS (VBRK + VBRP), SIN GLPCA
+--    Concilia calcula el volumen por clase de factura. Para llegar a los mismos 656.53 HL del 7 al 21-nov
+--    (solo las lineas con ITBMS) hace falta saber que lineas tienen impuesto.
+-- =====================================================================================
+
+-- A1. Columnas de VBRP (para ver como se llama el campo del impuesto; en SAP es MWSBP)
+DESCRIBE TABLE brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp;
+
+-- A2. Facturas ZNO3 del 7 al 21-nov: volumen total y volumen de las lineas con impuesto
+--     Esperado: hl_total = 830.32 y hl_con_impuesto = 656.53. Si falla por la columna mwsbp, mandarme el error y el resultado de A1.
+WITH k AS (
+    SELECT vbeln, fkart, CAST(fkdat AS DATE) AS dia, op_ind,
+           ROW_NUMBER() OVER (PARTITION BY vbeln ORDER BY source_commit_ts DESC) AS rn
+    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrk
+    WHERE __partition_column BETWEEN '202610' AND '202612'
+      AND fkdat BETWEEN '2026-11-07' AND '2026-11-21' AND vkorg = 'DC01' AND TRIM(fkart) = 'ZNO3'
 ),
-i AS (
-    SELECT regexp_replace(trim(CAST(invoice_number AS STRING)), '^0+', '') AS factura,
-           regexp_replace(trim(CAST(product_short_code AS STRING)), '^0+', '') AS material,
-           COUNT(*) AS lineas, SUM(total_volume) AS hl
-    FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
-    WHERE invoice_date BETWEEN '2024-12-01' AND '2025-07-31'
-      AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
-    GROUP BY 1, 2
+kv AS (
+    SELECT vbeln, dia FROM k WHERE rn = 1 AND UPPER(TRIM(COALESCE(op_ind, ''))) NOT IN ('D', 'DELETE')
+),
+p AS (
+    SELECT vbeln, posnr, matnr, volum, vkaus, mwsbp, op_ind,
+           ROW_NUMBER() OVER (PARTITION BY vbeln, posnr ORDER BY source_commit_ts DESC) AS rn
+    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
+    WHERE __partition_column BETWEEN '20261015' AND '20261130'
+      AND vbeln IN (SELECT vbeln FROM kv)
 )
-SELECT g.mes, g.fkart AS tipo_factura,
-       COUNT(*) AS lineas_cuenta,
-       SUM(CASE WHEN i.factura IS NOT NULL THEN 1 ELSE 0 END) AS estan_en_pa_invoice,
-       ROUND(SUM(COALESCE(i.hl, 0)), 2) AS hl_en_pa_invoice
-FROM g LEFT JOIN i ON i.factura = g.factura AND i.material = g.material
-GROUP BY 1, 2
-ORDER BY 1, 2;
+SELECT TRIM(COALESCE(p.vkaus, '')) AS uso,
+       COUNT(DISTINCT p.vbeln) AS facturas, COUNT(*) AS lineas,
+       ROUND(SUM(p.volum) / 100000, 2) AS hl_total,
+       ROUND(SUM(CASE WHEN COALESCE(p.mwsbp, 0) <> 0 THEN p.volum ELSE 0 END) / 100000, 2) AS hl_con_impuesto,
+       SUM(CASE WHEN COALESCE(p.mwsbp, 0) <> 0 THEN 1 ELSE 0 END) AS lineas_con_impuesto
+FROM kv JOIN p ON p.vbeln = kv.vbeln
+WHERE p.rn = 1 AND UPPER(TRIM(COALESCE(p.op_ind, ''))) NOT IN ('D', 'DELETE')
+GROUP BY 1
+ORDER BY 1;
 
-Project name
 
-pa_invoice – Actualización de la lógica de regalías (Panamá)
+-- =====================================================================================
+-- B. VELOCIDAD: por que columna esta particionada cada tabla que usa Concilia
+--    (ya sabemos: VBRK = yyyymm, VBRP = yyyymmdd). De cada resultado me interesan
+--    partitionColumns, numFiles y sizeInBytes.
+-- =====================================================================================
 
-Project description
+-- B1
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbak;
+-- B2
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbap;
+-- B3
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbfa;
+-- B4
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_vttk;
+-- B5
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_likp;
+-- B6
+DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_lips;
 
-= fnVentasSilverSql(#date(2026, 11, 1), #date(2026, 11, 22))
+-- B7. Valores de particion (solo los ultimos; es metadato, no lee la tabla). Uno por tabla.
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbak;
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbap;
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbfa;
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_vttk;
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_likp;
+SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_logistics_sap_pr3.copecac_lips;
