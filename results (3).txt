@@ -1,10 +1,57 @@
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_fbam;
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_fbfg;
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_head;
-DESCRIBE DETAIL brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_head_t;
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	6c65226f-38fd-4adf-ab64-92b89243218a	brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_fbam	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/sales/sap_pr3/copecac_dsdpr_fbam	2024-06-24T19:49:24.047+00:00	2026-11-23T16:31:46.000+00:00	["__partition_column"]	[]	229	22002384535	{"delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days","delta.enableChangeDataFeed":"true"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
 
-SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_fbam;
-SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_fbfg;
-SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_head;
-SHOW PARTITIONS brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_head_t;
+
+
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	472ed22a-5970-4666-a9e8-044a27bc2594	brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_fbfg	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/sales/sap_pr3/copecac_dsdpr_fbfg	2024-07-11T16:10:10.582+00:00	2026-11-23T13:17:57.000+00:00	["__partition_column"]	[]	252	3062845	{"delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days","delta.enableChangeDataFeed":"true"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
+
+
+
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	62d42a48-26be-467b-8afc-8018e7baeb19	brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_head	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/sales/sap_pr3/copecac_dsdpr_head	2024-06-27T12:19:09.807+00:00	2026-11-23T04:50:03.000+00:00	[]	[]	36	189016411	{"delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days","delta.enableChangeDataFeed":"true"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
+
+
+format	id	name	description	location	createdAt	lastModified	partitionColumns	clusteringColumns	numFiles	sizeInBytes	properties	minReaderVersion	minWriterVersion	tableFeatures	statistics	clusterByAuto
+delta	483f99cf-c428-4b67-a46e-b160cc3350b0	brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_dsdpr_head_t	null	abfss://silver@brewdatmazslvgldp.dfs.core.windows.net/data/maz/sales/sap_pr3/copecac_dsdpr_head_t	2024-06-27T12:25:23.610+00:00	2026-11-23T04:48:20.000+00:00	[]	[]	36	242308673	{"delta.deletedFileRetentionDuration":"interval 30 days","delta.logRetentionDuration":"interval 30 days","delta.enableChangeDataFeed":"true"}	1	4	["appendOnly","changeDataFeed","checkConstraints","generatedColumns","invariants"]	{}	false
+
+
+__partition_column
+2026
+2025
+2024
+
+
+__partition_column
+202407
+202503
+202508
+202512
+202408
+202607
+202609
+202409
+202509
+202411
+202502
+202610
+202511
+202410
+202412
+202501
+202602
+202605
+202406
+202504
+202506
+202601
+202603
+202405
+202510
+202606
+202604
+202608
+202505
+202507
+202611
 
