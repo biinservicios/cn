@@ -1,40 +1,20 @@
--- DSR silver v13: November volume by day and component (same rules as the report)
-WITH cuentas AS (
-    SELECT gl_account_code AS cuenta, cognos_account_name AS clase_cta
-    FROM brewdat_uc_delta_maz_prod.slv_maz_masterdata_manual.pa_general_ledger_accounts
-),
-glpca AS (
-    SELECT racct, budat, drcrk, runit, refdocnr, posnr, fkart
-    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
-    WHERE __partition_column = '202611' AND rbukrs = 'DC00'
-      AND budat BETWEEN '2026-11-01' AND '2026-11-30'
-      AND (racct IN (SELECT cuenta FROM cuentas)
-           OR racct IN ('S411505AT0', 'S411505ATI', 'S411505CT0', 'S411505FT0',
-                        'S431105BT0', 'S431105CT0', 'S431105ET0', 'S431105FT0', 'S5313011TP'))
-),
-vbrp AS (
-    SELECT vbeln, posnr, vkaus, volum
-    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
-    WHERE __partition_column BETWEEN '20260917' AND '20270114'
-      AND erdat BETWEEN '2026-09-17' AND '2027-01-14'
-),
-base AS (
-    SELECT CAST(g.budat AS DATE) AS dia, c.clase_cta, g.racct AS cuenta,
-           TRIM(COALESCE(p.vkaus, '')) AS util, COALESCE(g.fkart, '') AS clfac, COALESCE(g.runit, '') AS runit,
-           COALESCE(p.volum, 0) * CASE WHEN g.drcrk = 'H' THEN -1 ELSE 1 END / 100000 AS hl
-    FROM glpca g
-    JOIN vbrp p ON p.vbeln = g.refdocnr AND p.posnr = g.posnr
-    LEFT JOIN cuentas c ON c.cuenta = g.racct
-)
-SELECT dia,
-       ROUND(SUM(CASE WHEN clase_cta = 'GSI' AND runit <> '' AND util <> 'E5' THEN hl * -1 ELSE 0 END), 2) AS hl_vendido,
-       ROUND(SUM(CASE WHEN clase_cta = 'Desc_Trade' AND util = 'E5' THEN hl ELSE 0 END), 2) AS hl_trade,
-       ROUND(SUM(CASE WHEN clase_cta = 'Desc_Rewards' AND util = 'R4' AND runit <> '' THEN hl * -1 ELSE 0 END), 2) AS hl_rewards,
-       ROUND(SUM(CASE WHEN cuenta IN ('S6241000T0', 'S624100ZT0', 'S624102HT0')
-                       AND util IN ('D0', 'D6', 'D8', 'D9', 'D1', 'D2', 'D7', 'C2', 'D3', 'D4', 'D5', 'R4') THEN hl ELSE 0 END), 2) AS hl_btl,
-       ROUND(SUM(CASE WHEN clfac = 'ZNO3' AND util <> 'PAC'
-                       AND cuenta IN ('S411505AT0', 'S411505ATI', 'S411505CT0', 'S411505FT0',
-                                      'S431105BT0', 'S431105CT0', 'S431105ET0', 'S431105FT0', 'S5313011TP') THEN hl ELSE 0 END), 2) AS hl_reg
-FROM base
-GROUP BY 1
-ORDER BY 1;
+cd "C:\MAZ_Command Center PA"
+git fetch origin
+git worktree add -b pbi/comercial-dsr "C:\MAZ_Command Center PA - comercial-dsr" origin/main
+git worktree add -b pbi/comercial-concilia-pedidos "C:\MAZ_Command Center PA - comercial-concilia-pedidos" origin/main
+
+cd "C:\MAZ_Command Center PA - comercial-dsr"
+git add -A "BrewDat Prod MAZ Panama/Command Center"
+git status
+
+git commit -m "pbi_pa_comercial_dsr: reemplaza DSR silver (regalias nuevas desde nov-2026, filtros de particion, nombre segun nomenclatura)"
+git push -u origin pbi/comercial-dsr
+
+
+cd "C:\MAZ_Command Center PA - comercial-concilia-pedidos"
+git add -A "BrewDat Prod MAZ Panama/Command Center"
+git status
+
+
+git commit -m "pbi_pa_comercial_concilia_pedidos: reemplaza Concilia Pedidos silver (ventas con metodo DSR silver, regalias nuevas desde nov-2026, filtros de particion, nombre segun nomenclatura)"
+git push -u origin pbi/comercial-concilia-pedidos
