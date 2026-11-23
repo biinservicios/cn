@@ -1,10 +1,47 @@
-Name	Date modified	Tamano_MB	Primeras_5_lineas
-deal_condition_fact_2025.csv	23/11/2026 12:19:56		"Doc.venta,Factura,Customer Code,Material,ClFac,GSI,NTO,Desc_Trade,Desc_Precio,Desc_Total,Sales Volume (HL) - BIL,HL_Trade,HL_BTL_TOTAL,Desc_Rewards,HL_Rewards,NumeroPedido,Calendar Day,ClPed,Desc_NCr,SKU-Local Name,Product Category-Global,Category Group,Nombre 3,GVen,Canal,Denominaci�n,Ce.,Nombre 1,Direcci�n,Regi�n,Gerencia,ZV,Fecha_doc.,Fe.contab.,Fecha_factura,Fecha_Pedido,promo,FInicio,FFinal,Descripci�n,estatus,Concepto,valor_condicion,year
-4746389663,2694523421,11465481,21047,ZNP1,111.35,89.54664,5.57,0,5.57,0.5676,0,0,0,0,B2BPAB2B2531485,2025-08-15,APP,,BALBOA 473ML SW4X6,Beer,Beer Core,Mini Super Hou N2,P1A,Off Tradicional,PA Off Trad MiniSup,DC02,DC San Crist�bal,Tradicional,Metro,Metro Centro,PAM139,,,,2025.08.13,12575077,2025-08-01,2025-08-31,""A. Cerveza Nacional 473ml: Desde 2Cj, Recibe 5% Desct"",No Activa,Promo Beer Core Lata,-15,2025
-4746389664,2694520586,11079244,14624,ZNP1,94.1,74.6324,4.71,0,4.71,0.5676,0,0,0,0,B2BPAB2B2531500,2025-08-14,APP,,BALBOA ICE LATA 473ML SW24 PC,Beer,Beer Core,Sup..."
-deal_condition_fact_2024.csv	23/11/2026 12:19:36		"Doc.venta,Factura,Customer Code,Material,ClFac,GSI,NTO,Desc_Trade,Desc_Precio,Desc_Total,Sales Volume (HL) - BIL,HL_Trade,HL_BTL_TOTAL,Desc_Rewards,HL_Rewards,NumeroPedido,Calendar Day,ClPed,Desc_NCr,SKU-Local Name,Product Category-Global,Category Group,Nombre 3,GVen,Canal,Denominaci�n,Ce.,Nombre 1,Direcci�n,Regi�n,Gerencia,ZV,Fecha_doc.,Fe.contab.,Fecha_factura,Fecha_Pedido,promo,FInicio,FFinal,Descripci�n,estatus,Concepto,valor_condicion,year
-4742691140,2694033858,13997049,7008,ZNP1,80.95,67.4854,4.05,0,4.05,0.426,0,0,0,0,B2BPAB2B2157741,2024-12-17,APP,,ATLAS GOLDEN LIGHT LATA 355ML SW6 X24,Beer,Beer Core,Mini Super Nuevo Angel,P3C,Off Tradicional,PA Off Trad MiniSup,DC10,DC Chiriqu�,Tradicional,Interior Oeste,Chiriqui Oeste,PAM372,,,,2024.12.13,11107347,2024-12-12,2024-12-29,""A. Cerveza Nacional Lata: 2Cj, Recibe 5% Desct"",No Activa,Promo Beer Core Lata,-5,2024
-4742691140,2694033858,13997049,8733,ZNP1,449.28,363.46528,22.46,0,22.46,2.2152,0,0,0,0,B2BPAB2B2157741,2024-12-17,APP,,BALBOA NIM LATA 355ML X 2..."
-deal_condition_fact_2026.csv	23/11/2026 12:19:46		"Doc.venta,Factura,Customer Code,Material,ClFac,GSI,NTO,Desc_Trade,Desc_Precio,Desc_Total,Sales Volume (HL) - BIL,HL_Trade,HL_BTL_TOTAL,Desc_Rewards,HL_Rewards,NumeroPedido,Calendar Day,ClPed,Desc_NCr,SKU-Local Name,Product Category-Global,Category Group,Nombre 3,GVen,Canal,Denominaci�n,Ce.,Nombre 1,Direcci�n,Regi�n,Gerencia,ZV,Fecha_doc.,Fe.contab.,Fecha_factura,Fecha_Pedido,promo,FInicio,FFinal,Descripci�n,estatus,Concepto,valor_condicion,year
-4749571506,2694942226,12447760,20449,ZNP1,62.64,52.5602,3.13,0,3.13,0.2376,0,0,0,0,B2BPAB2B2835652,2026-02-28,APP,,CORONA NRB 330ML SW6 X24,Beer,Beer Premium,Las Arepas De Via Espa�a,P1A,On Tradicional,PA On Trad RestTrad,DC09,DC Las Sabanas,Tradicional,Metro,Metro Oeste,PAM115,,,,2026.02.27,,,,,No Activa,,,2026
-4749571506,2694942226,12447760,20449,ZNP1,62.64,52.5602,3.13,0,3.13,0.2376,0,0,0,0,B2BPAB2B2835652,2026-02-28,APP,,CORONA NRB 330ML SW6 X24,Beer,Beer Premium,Las Arepas De Via Espa�a,P1A,On Tradicional,PA On Trad RestTrad,DC09,DC Las Sabanas,Tradicional,Metr..."
+let
+    Sitio = "https://anheuserbuschinbev.sharepoint.com/sites/pa/fi",
+    Carpeta = "https://anheuserbuschinbev.sharepoint.com/sites/pa/fi/IC/sql_server_historicos/deal_conditions/",
+    Origen = SharePoint.Files(Sitio, [ApiVersion = 15]),
+    Archivos = Table.SelectRows(Origen, each Text.Lower([Folder Path]) = Text.Lower(Carpeta) and Text.EndsWith(Text.Lower([Name]), ".csv")),
+    Leer = (contenido as binary) as table =>
+        let
+            Csv = Csv.Document(contenido, [Delimiter = ",", Encoding = 1252, QuoteStyle = QuoteStyle.Csv]),
+            Enc = Table.PromoteHeaders(Csv, [PromoteAllScalars = true]),
+            Sel = Table.SelectColumns(Enc, {"Calendar Day", "Sales Volume (HL) - BIL", "valor_condicion", "Denominación"}),
+            Tip = Table.TransformColumns(Sel, {
+                {"Calendar Day", each try Date.FromText(_, [Format = "yyyy-MM-dd", Culture = "en-US"]) otherwise null, type date},
+                {"Sales Volume (HL) - BIL", each try Number.FromText(_, "en-US") otherwise null, type number},
+                {"valor_condicion", each try Number.FromText(_, "en-US") otherwise null, type number}})
+        in
+            Tip,
+    ConDatos = Table.AddColumn(Archivos, "Datos", each Leer([Content])),
+    Solo = Table.SelectColumns(ConDatos, {"Name", "Datos"}),
+    Exp = Table.ExpandTableColumn(Solo, "Datos", {"Calendar Day", "Sales Volume (HL) - BIL", "valor_condicion", "Denominación"}),
+    ConMes = Table.AddColumn(Exp, "Mes", each if [Calendar Day] = null then null else Date.StartOfMonth([Calendar Day]), type date),
+    Resumen = Table.Group(ConMes, {"Name", "Mes"}, {
+        {"filas", each Table.RowCount(_), Int64.Type},
+        {"primer_dia", each List.Min([Calendar Day]), type date},
+        {"ultimo_dia", each List.Max([Calendar Day]), type date},
+        {"hl", each Number.Round(List.Sum([#"Sales Volume (HL) - BIL"]), 2), type number},
+        {"valor_condicion", each Number.Round(List.Sum([valor_condicion]), 2), type number},
+        {"ejemplo_denominacion", each List.First(List.RemoveNulls([Denominación])), type text}}),
+    Orden = Table.Sort(Resumen, {{"Mes", Order.Ascending}})
+in
+    Orden
+
+
+
+
+
+
+SELECT LEFT(CONVERT(varchar(10), [Calendar Day], 23), 7) AS mes,
+       COUNT(*) AS filas,
+       ROUND(SUM(CAST([Sales Volume (HL) - BIL] AS float)), 2) AS hl,
+       ROUND(SUM(CAST([valor_condicion] AS float)), 2) AS valor_condicion
+FROM WarehousePanama.dbo.deal_conditions_fact
+GROUP BY LEFT(CONVERT(varchar(10), [Calendar Day], 23), 7)
+ORDER BY 1;
+
+
+
+
