@@ -1,20 +1,10 @@
-cd "C:\MAZ_Command Center PA"
-git fetch origin
-git worktree add -b pbi/comercial-dsr "C:\MAZ_Command Center PA - comercial-dsr" origin/main
-git worktree add -b pbi/comercial-concilia-pedidos "C:\MAZ_Command Center PA - comercial-concilia-pedidos" origin/main
-
-cd "C:\MAZ_Command Center PA - comercial-dsr"
-git add -A "BrewDat Prod MAZ Panama/Command Center"
-git status
-
-git commit -m "pbi_pa_comercial_dsr: reemplaza DSR silver (regalias nuevas desde nov-2026, filtros de particion, nombre segun nomenclatura)"
-git push -u origin pbi/comercial-dsr
-
-
-cd "C:\MAZ_Command Center PA - comercial-concilia-pedidos"
-git add -A "BrewDat Prod MAZ Panama/Command Center"
-git status
-
-
-git commit -m "pbi_pa_comercial_concilia_pedidos: reemplaza Concilia Pedidos silver (ventas con metodo DSR silver, regalias nuevas desde nov-2026, filtros de particion, nombre segun nomenclatura)"
-git push -u origin pbi/comercial-concilia-pedidos
+let
+    Sitio = "https://anheuserbuschinbev.sharepoint.com/sites/pa/fi",
+    Carpeta = "https://anheuserbuschinbev.sharepoint.com/sites/pa/fi/IC/sql_server_historicos/deal_conditions/",
+    Origen = SharePoint.Files(Sitio, [ApiVersion = 15]),
+    Archivos = Table.SelectRows(Origen, each Text.Lower([Folder Path]) = Text.Lower(Carpeta) and Text.EndsWith(Text.Lower([Name]), ".csv")),
+    ConTamano = Table.AddColumn(Archivos, "Tamano_MB", each Number.Round(Record.FieldOrDefault([Attributes], "Size", 0) / 1048576, 1), type number),
+    ConLineas = Table.AddColumn(ConTamano, "Primeras_5_lineas", each Text.Combine(List.FirstN(Lines.FromBinary([Content], null, null, 65001), 5), "#(lf)"), type text),
+    Resultado = Table.SelectColumns(ConLineas, {"Name", "Date modified", "Tamano_MB", "Primeras_5_lineas"})
+in
+    Resultado
