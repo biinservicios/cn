@@ -1,11 +1,33 @@
--- VBAK: which date does the partition follow, and what is in the null partition?
-SELECT COALESCE(__partition_column, '(null)') AS particion,
-       COUNT(*) AS filas,
-       MIN(erdat) AS erdat_min, MAX(erdat) AS erdat_max,
-       MIN(audat) AS audat_min, MAX(audat) AS audat_max
-FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbak
-WHERE __partition_column IN ('202610', '202611') OR __partition_column IS NULL
+-- New royalties (ZNO3) by invoice date, same rule as DSR silver v13
+WITH g AS (
+    SELECT racct, budat, drcrk, refdocnr, posnr
+    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
+    WHERE __partition_column = '202611'
+      AND rbukrs = 'DC00' AND budat BETWEEN '2026-11-01' AND '2026-11-30'
+      AND TRIM(fkart) = 'ZNO3'
+      AND racct IN ('S411505AT0', 'S411505ATI', 'S411505CT0', 'S411505FT0',
+                    'S431105BT0', 'S431105CT0', 'S431105ET0', 'S431105FT0', 'S5313011TP')
+),
+k AS (
+    SELECT vbeln, CAST(fkdat AS DATE) AS dia, op_ind,
+           ROW_NUMBER() OVER (PARTITION BY vbeln ORDER BY source_commit_ts DESC) AS rn
+    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrk
+    WHERE __partition_column BETWEEN '202609' AND '202612'
+      AND vbeln IN (SELECT refdocnr FROM g)
+),
+p AS (
+    SELECT vbeln, posnr, volum, TRIM(COALESCE(vkaus, '')) AS util, op_ind,
+           ROW_NUMBER() OVER (PARTITION BY vbeln, posnr ORDER BY source_commit_ts DESC) AS rn
+    FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
+    WHERE __partition_column BETWEEN '20260915' AND '20261231'
+      AND vbeln IN (SELECT refdocnr FROM g)
+)
+SELECT CASE WHEN k.dia BETWEEN '2026-11-01' AND '2026-11-30' THEN k.dia ELSE CAST(g.budat AS DATE) END AS dia,
+       COUNT(DISTINCT g.refdocnr) AS facturas,
+       ROUND(SUM(COALESCE(p.volum, 0) * CASE WHEN g.drcrk = 'H' THEN -1 ELSE 1 END) / 100000, 2) AS hl_regalias
+FROM g
+JOIN p ON p.vbeln = g.refdocnr AND p.posnr = g.posnr AND p.rn = 1
+      AND UPPER(TRIM(COALESCE(p.op_ind, ''))) NOT IN ('D', 'DELETE') AND p.util <> 'PAC'
+LEFT JOIN k ON k.vbeln = g.refdocnr AND k.rn = 1
 GROUP BY 1
 ORDER BY 1;
-
-set PENTAHO_JAVA_HOME=C:\jdk-11
