@@ -1,1 +1,7 @@
-java -XshowSettings:properties -version 2>&1 | findstr java.home
+SELECT date_format(invoice_date, 'yyyy-MM') AS mes,
+       ROUND(SUM(total_volume), 2) AS hl_pa_invoice
+FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
+WHERE invoice_date >= '2026-09-01' AND invoice_date < '2026-11-01'
+  AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
+GROUP BY 1
+ORDER BY 1;
