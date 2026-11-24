@@ -1,10 +1,13 @@
--- 1. Columns of the table
-SELECT COLUMN_NAME, DATA_TYPE
-FROM WarehousePanama.INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Esqueleto_2017_2018_c_NTO'
-ORDER BY ORDINAL_POSITION;
-
--- 2. A few rows, to see how the period and the volume are stored
-SELECT TOP 5 *
-FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO;
-
+SELECT [Calendar Month] AS mes,
+       COUNT(*) AS filas,
+       COUNT(DISTINCT [Customer Code] + '|' + [Material]) AS cliente_material,
+       ROUND(SUM(ISNULL([Sales Volume (HL) - BIL], 0)), 2) AS hl_vendido,
+       ROUND(SUM(ISNULL([HL_Trade], 0)), 2) AS hl_trade,
+       ROUND(SUM(ISNULL([HL_BTL_TOTAL], 0)), 2) AS hl_btl,
+       ROUND(SUM(ISNULL(CAST([HL_Rewards] AS float), 0)), 2) AS hl_rewards,
+       ROUND(SUM(ISNULL([Sales Volume (HL) - BIL], 0) + ISNULL([HL_Trade], 0)
+               + ISNULL([HL_BTL_TOTAL], 0) + ISNULL(CAST([HL_Rewards] AS float), 0)), 2) AS hl_total
+FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO
+WHERE [Calendar Month] >= '2025.01'
+GROUP BY [Calendar Month]
+ORDER BY [Calendar Month];
