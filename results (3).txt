@@ -1,7 +1,10 @@
-SELECT date_format(invoice_date, 'yyyy-MM') AS mes,
-       ROUND(SUM(total_volume), 2) AS hl_pa_invoice
-FROM brewdat_uc_delta_maz_prod.gld_maz_sales_sell_in.pa_invoice
-WHERE invoice_date >= '2026-09-01' AND invoice_date < '2026-11-01'
-  AND (op_ind IS NULL OR op_ind NOT IN ('D', 'DELETE'))
-GROUP BY 1
-ORDER BY 1;
+-- 1. Columns of the table
+SELECT COLUMN_NAME, DATA_TYPE
+FROM WarehousePanama.INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Esqueleto_2017_2018_c_NTO'
+ORDER BY ORDINAL_POSITION;
+
+-- 2. A few rows, to see how the period and the volume are stored
+SELECT TOP 5 *
+FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO;
+
