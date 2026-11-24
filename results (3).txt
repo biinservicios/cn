@@ -1,35 +1,4 @@
-SELECT COUNT(*) AS filas,
-       COUNT(DISTINCT [Customer Code] + '|' + [Material]) AS cliente_material,
-       ROUND(SUM(ISNULL([Sales Volume (HL) - BIL], 0)), 2) AS hl_vendido
+SELECT *
+INTO WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO_respaldo_202610
 FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO
 WHERE [Calendar Month] = '2026.10';
-
-
-BEGIN TRANSACTION;
-
-WITH d AS (
-    SELECT ROW_NUMBER() OVER (
-               PARTITION BY [Calendar Month], [Customer Code], [Material],
-                            [Sales Volume (HL) - BIL], [Sales Volume (Cases) - BIL],
-                            [Gross Sales Income in USD], [Discounts Value in USD], [Excise in USD],
-                            [NTO], [Free Products (Hls)], [Desc_Trade], [Desc_Precio],
-                            [HL_Trade], [HL_BTL_TOTAL], [Desc_Rewards], [HL_Rewards]
-               ORDER BY (SELECT NULL)) AS rn
-    FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO
-    WHERE [Calendar Month] = '2026.10'
-)
-DELETE FROM d
-WHERE rn > 1;
-
-SELECT COUNT(*) AS filas,
-       COUNT(DISTINCT [Customer Code] + '|' + [Material]) AS cliente_material,
-       ROUND(SUM(ISNULL([Sales Volume (HL) - BIL], 0)), 2) AS hl_vendido
-FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO
-WHERE [Calendar Month] = '2026.10';
-
-
-
-COMMIT TRANSACTION;
-
-
-ROLLBACK TRANSACTION;
