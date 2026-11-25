@@ -1,4 +1,19 @@
-SELECT *
-INTO WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO_respaldo_202610
-FROM WarehousePanama.dbo.Esqueleto_2017_2018_c_NTO
-WHERE [Calendar Month] = '2026.10';
+cd "C:\MAZ_Command Center PA"
+git fetch origin
+git worktree add -b pbi/revenue-descuentos-promo "C:\MAZ_Command Center PA - revenue-descuentos-promo" origin/main
+
+
+cd "C:\MAZ_Command Center PA - revenue-descuentos-promo"
+git add -A "BrewDat Prod MAZ Panama/Revenue"
+git status
+
+
+
+cd "C:\MAZ_Command Center PA - revenue-descuentos-promo"
+git add -A "BrewDat Prod MAZ Panama/Revenue"
+git status
+
+
+
+git commit -m "pbi_pa_revenue_descuentos_promo: Descuentos Promo sobre Databricks con historia desde SharePoint, filtros de particion y warehouse de Panama"
+git push -u origin pbi/revenue-descuentos-promo
