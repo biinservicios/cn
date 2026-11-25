@@ -4,16 +4,11 @@ git worktree add -b pbi/revenue-descuentos-promo "C:\MAZ_Command Center PA - rev
 
 
 cd "C:\MAZ_Command Center PA - revenue-descuentos-promo"
-git add -A "BrewDat Prod MAZ Panama/Revenue"
+git add -A "BrewDat Prod MAZ Panama/Command Center"
 git status
 
 
-
-cd "C:\MAZ_Command Center PA - revenue-descuentos-promo"
-git add -A "BrewDat Prod MAZ Panama/Revenue"
-git status
-
-
-
-git commit -m "pbi_pa_revenue_descuentos_promo: Descuentos Promo sobre Databricks con historia desde SharePoint, filtros de particion y warehouse de Panama"
+git commit -m "pbi_pa_revenue_descuentos_promo: reemplaza pbi_pa_descuentos_promo en Command Center (Databricks con historia desde SharePoint, filtros de particion, warehouse de Panama)"
 git push -u origin pbi/revenue-descuentos-promo
+
+
