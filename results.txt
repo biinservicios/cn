@@ -1,183 +1,143 @@
-factura	posnr	cuenta	fkart	drcrk	budat	material	uso	hl_vbrp	monto
-2695529032	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	1.2000	-760.59
-2695529032	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	1.2000	760.59
-2695529080	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	1.2000	-760.59
-2695529080	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	1.2000	760.59
-2695529346	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	1.2000	-760.59
-2695529346	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	1.2000	760.59
-2695529399	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	0.0600	-38.03
-2695529399	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	0.0600	38.03
-2695529399	21	S5313010TP	ZNO1	H	2026-10-29	21436	D2	0.0600	-35.58
-2695529399	21	S624100ZT0	ZNO1	S	2026-10-29	21436	D2	0.0600	35.58
-2695529399	31	S5313010TP	ZNO1	H	2026-10-29	21829	D2	0.0600	-38.03
-2695529399	31	S624100ZT0	ZNO1	S	2026-10-29	21829	D2	0.0600	38.03
-2695529454	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	1.2000	-760.59
-2695529454	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	1.2000	760.59
-2695529455	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	1.2000	-760.59
-2695529455	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	1.2000	760.59
-2695529595	11	S5313010TP	ZNO1	H	2026-10-29	21440	D2	1.2000	-760.59
-2695529595	11	S624100ZT0	ZNO1	S	2026-10-29	21440	D2	1.2000	760.59
+PS C:\MAZ_Command Center PA> cd "C:\MAZ_Command Center PA - revenue-descuentos-promo"
+PS C:\MAZ_Command Center PA - revenue-descuentos-promo> git add -A "BrewDat Prod MAZ Panama/Revenue"
+PS C:\MAZ_Command Center PA - revenue-descuentos-promo> git status
+On branch pbi/revenue-descuentos-promo
+Your branch is up to date with 'origin/main'.
 
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/.platform
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/StaticResources/RegisteredResources/ABI613163211398331.json     
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/StaticResources/RegisteredResources/backgroundAbi2Slim06678618105546819.png
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/StaticResources/RegisteredResources/backgroundAbi2Slim847612657435765.png
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/StaticResources/RegisteredResources/backgroundAbi2Slim9617655874448101.png
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/StaticResources/SharedResources/BaseThemes/CY21SU11.json        
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition.pbir
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/page.json    
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/0facd39b4ca64adaa388/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/187a0b51945a7d4b6f98/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/2f107e71f34e833c3e2c/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/39b127d881e99bacbdea/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/3b32a2503d0307e5a403/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/43c24c61960338b84a41/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/45d11059ad31ac0e02dc/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/48ea34194e5cd0955889/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/7f71e068e8c7957649be/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/8abc3c9eb0f01aa18d8c/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/9006a820bb13c7056d0c/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/9a802aebae7ceb65f35b/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/bc19052c4cca704a7f88/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/d3a7aa51cda649b184aa/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/d8efac1f91185aa361e0/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/f5249cde3fa04ad2b995/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection13beb445ed67384000d8/visuals/fd2d51c62c0e55c78ac5/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/page.json    
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/370e69d87474c962e438/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/51e74578ddc6cdbd34b5/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/66c41fb686a0aa1011eb/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/77bb084c42481d799313/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/7dd0ef710d31ba41c0b5/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/ac00b53e1ad3430ea1cb/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/ad01c32b67ce849815a8/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/b2ac72b6fe2d11c49ca8/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection29e1028f6e1f2f3eb3c3/visuals/f03a0a9f22c243bf91b2/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/page.json    
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/07b6559004be470ea6c2/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/0b1fbebe73c14327db52/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/207fff795adfbe703e7f/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/27777fcbe08dd7282a34/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/38c9af88404e7151900c/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/4cf4b7ad2686e4803b2e/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/5b174814e2b88c092d4e/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/673037bb8820083616bd/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/71352b4fa432d3074909/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/71ec28db2de04711b196/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/77823e46a7add0fb177e/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/801a1453a079c812e40c/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/85dcdb2fe0be2e1c0687/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/97b7e7dfb5799d38b455/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/a5d3cecda7e656d60200/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/adcf20efef2da0311951/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/b15bc86d0e3b9c99ab76/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/bcf8710e74f7dbc6ad8e/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/c428f06ecd6c7c393998/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection31f84c813027fbb48b83/visuals/d5171cc520c07a6b75b7/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/page.json    
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/0acbebeda64d2042828e/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/1bb89386e9c0cb54ac19/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/27dfa043411c4762a8cd/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/3f6a9dcf51e9097e003a/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/61c404f3531e1cc62447/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/8a106e7ce20169770547/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/97c67b55850d434aac80/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/adb0126aac7f1d6c9b4e/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSection74f2289442d80cb1105a/visuals/d68c094c7055d7e029d0/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/page.json    
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/visuals/1fffa74cac8f43fc5290/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/visuals/46647c6a2d3b8da6414f/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/visuals/c41c0ccf1d8e1b71527f/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/visuals/c7eb749d5d2cb3c954ed/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/visuals/e1ae75dd94a5493cb18f/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionc31ebb6360a37f15bcd6/visuals/faf00e2cee864829a2f9/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/page.json    
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/3799fde26eba8c8c81a4/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/3de3a5e283f2d1b7d8c7/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/4db068c72e628396e447/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/68b0c0be9dc00d671028/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/6aa89729378da9f10ecf/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/776bbe4bf33936c33f00/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/a097264f8981edd57c13/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/b33bd0357da84cd39937/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/d7c451ef30d043e990ab/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/e2c73eef1944a9dd1607/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/ReportSectionda10b5c26d739b2fadb8/visuals/f538d8ec509376b96cb9/visual.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/pages/pages.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/report.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.Report/definition/version.json 
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/.platform
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/DAXQueries/Consulta 1.dax
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition.pbism
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/cultures/es-ES.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/database.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/expressions.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/model.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/relationships.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/DateTableTemplate_ea5a0113-9b04-4d96-8cfe-85386f86b96d.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_1b595dd2-a845-422b-bef6-215cdf19ae99.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_32510770-6900-452e-b82c-f3afe227fa8f.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_48055925-0102-4653-aebf-a30675a64287.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_6c94acd5-5a49-4534-8fc9-b6f40608a7dd.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_70e26a3d-c3a9-4e61-9922-9e3cb2c5ba60.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_76b0d291-d121-4d91-883b-f3d30f1f1463.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_7a1b67a9-3001-4c50-a41f-c3e175afbc27.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_9d0ec7fb-be93-45c9-8ea8-4689e95aa3fc.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_a2ea73c0-4dd6-4957-a32c-27f3653e7e72.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_c3eb327d-0a8a-48bc-87d4-99d4171e13a6.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_cc501a76-383b-49bb-85f2-580d5b2e2f56.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/LocalDateTable_da66e6d0-0908-46b2-8b32-887e2a6278e6.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/Periodo.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/Territorial.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/_medidas.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/dim_Calendar.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/dim_GCOA.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/dim_cliente.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/dim_dc_group.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/dim_deal_condition.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/dim_producto.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/fact_compradores_deal.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/fact_compradores_deal_ayer.tmdl        
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/fact_compradores_deal_day.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/fact_sales.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/definition/tables/plan_mayoristas.tmdl
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.SemanticModel/diagramLayout.json
+        deleted:    BrewDat Prod MAZ Panama/Command Center/pbi_pa_descuentos_promo.pbip
 
-mes	cuenta	tipo_factura	lineas	hl
-2025-01	S5313010TP	ZNOB	2	-2.70
-2025-01	S624100ZT0	ZNOB	2	2.70
-2025-02	S5313010TP	ZNOB	4	-5.53
-2025-02	S624100ZT0	ZNOB	4	5.53
-2025-03	S5313010TP	ZNOB	4	-3.24
-2025-03	S624100ZT0	ZNOB	4	3.24
-2025-04	S5313010TP	ZNOB	5	-2.22
-2025-04	S624100ZT0	ZNOB	5	2.22
-2025-05	S5313010TP	ZNOB	22	-30.96
-2025-05	S5313010TP	ZNS6	14	15.78
-2025-05	S624100ZT0	ZNOB	22	30.96
-2025-05	S624100ZT0	ZNS6	14	-15.78
-2025-06	S5313010TP	ZNOB	16	-13.11
-2025-06	S624100ZT0	ZNOB	16	13.11
-2025-07	S5313010TP	ZNOB	19	-22.20
-2025-07	S624100ZT0	ZNOB	19	22.20
-2025-08	S5313010TP	ZNO1	1	-0.06
-2025-08	S5313010TP	ZNOB	21	-17.76
-2025-08	S624100ZT0	ZNO1	1	0.06
-2025-08	S624100ZT0	ZNOB	21	17.76
-2025-09	S5313010TP	ZNOB	19	-15.24
-2025-09	S624100ZT0	ZNOB	19	15.24
-2025-10	S5313010TP	ZNO1	4	-2.04
-2025-10	S5313010TP	ZNOB	21	-11.34
-2025-10	S5313010TP	ZNS6	1	0.60
-2025-10	S624100ZT0	ZNO1	4	2.04
-2025-10	S624100ZT0	ZNOB	21	11.34
-2025-10	S624100ZT0	ZNS6	1	-0.60
-2025-11	S5313010TP	ZNO1	1	-0.60
-2025-11	S5313010TP	ZNOB	15	-18.54
-2025-11	S624100ZT0	ZNO1	1	0.60
-2025-11	S624100ZT0	ZNOB	15	18.54
-2025-12	S431109ZT0	ZNO5	2	-0.12
-2025-12	S5313010TP	ZNO1	1	-0.24
-2025-12	S5313010TP	ZNOB	14	-13.69
-2025-12	S624100ZT0	ZNO1	1	0.24
-2025-12	S624100ZT0	ZNOB	14	13.69
-2026-01	S431109ZT0	ZNO5	2	-0.12
-2026-01	S5313010TP	ZNOB	11	-13.32
-2026-01	S624100ZT0	ZNOB	11	13.32
-2026-02	S431109ZT0	ZNO5	31	-0.32
-2026-02	S431109ZT0	ZNS6	3	0.03
-2026-02	S5313010TP	ZNOB	20	-17.70
-2026-02	S624100ZT0	ZNOB	20	17.70
-2026-03	S431109ZT0	ZNO5	60	-0.93
-2026-03	S431109ZT0	ZNS6	5	0.05
-2026-03	S5313010TP	ZNO1	2	-0.66
-2026-03	S5313010TP	ZNOB	13	-6.72
-2026-03	S624100ZT0	ZNO1	2	0.66
-2026-03	S624100ZT0	ZNOB	13	6.72
-2026-04	S431109ZT0	ZNO5	134	-1.72
-2026-04	S431109ZT0	ZNS6	10	0.10
-2026-04	S5313010TP	ZNO1	2	-0.96
-2026-04	S5313010TP	ZNOB	17	-13.02
-2026-04	S624100ZT0	ZNO1	2	0.96
-2026-04	S624100ZT0	ZNOB	17	13.02
-2026-05	S431109ZT0	ZNO5	103	-2.00
-2026-05	S431109ZT0	ZNS6	1	0.01
-2026-05	S5313010TP	ZNO1	18	-36.12
-2026-05	S5313010TP	ZNOB	43	-24.00
-2026-05	S5313010TP	ZNS6	22	14.58
-2026-05	S624100ZT0	ZNO1	18	36.12
-2026-05	S624100ZT0	ZNOB	43	24.00
-2026-05	S624100ZT0	ZNS6	22	-14.58
-2026-06	S431109ZT0	ZNO5	129	-2.04
-2026-06	S431109ZT0	ZNS6	6	0.26
-2026-06	S5313010TP	ZNO1	64	-47.88
-2026-06	S5313010TP	ZNOB	15	-7.44
-2026-06	S5313010TP	ZNS6	8	4.80
-2026-06	S624100ZT0	ZNO1	64	47.88
-2026-06	S624100ZT0	ZNOB	15	7.44
-2026-06	S624100ZT0	ZNS6	8	-4.80
-2026-07	S431109ZT0	ZNO5	177	-2.22
-2026-07	S431109ZT0	ZNS6	12	0.22
-2026-07	S5313010TP	ZNO1	22	-24.24
-2026-07	S5313010TP	ZNOB	17	-9.48
-2026-07	S624100ZT0	ZNO1	22	24.24
-2026-07	S624100ZT0	ZNOB	17	9.48
-2026-08	S431109ZT0	ZNO5	121	-1.38
-2026-08	S431109ZT0	ZNS6	9	0.09
-2026-08	S5313010TP	ZNO1	82	-42.90
-2026-08	S5313010TP	ZNOB	25	-7.14
-2026-08	S5313010TP	ZNS6	8	6.12
-2026-08	S624100ZT0	ZNO1	82	42.90
-2026-08	S624100ZT0	ZNOB	25	7.14
-2026-08	S624100ZT0	ZNS6	8	-6.12
-2026-09	S431109ZT0	ZNO5	113	-1.92
-2026-09	S431109ZT0	ZNS6	7	0.07
-2026-09	S5313010TP	ZNO1	82	-46.08
-2026-09	S5313010TP	ZNOB	22	-9.14
-2026-09	S5313010TP	ZNS6	3	4.80
-2026-09	S624100ZT0	ZNO1	82	46.08
-2026-09	S624100ZT0	ZNOB	22	9.14
-2026-09	S624100ZT0	ZNS6	3	-4.80
-2026-10	S431109ZT0	ZNO5	82	-1.70
-2026-10	S431109ZT0	ZNS6	4	0.28
-2026-10	S5313010TP	ZNO1	33	-40.98
-2026-10	S5313010TP	ZNOB	21	-15.72
-2026-10	S624100ZT0	ZNO1	33	40.98
-2026-10	S624100ZT0	ZNOB	21	15.72
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        BrewDat Prod MAZ Panama/Command Center/pbi_pa_revenue_descuentos_promo.Report/
+        BrewDat Prod MAZ Panama/Command Center/pbi_pa_revenue_descuentos_promo.SemanticModel/
+        BrewDat Prod MAZ Panama/Command Center/pbi_pa_revenue_descuentos_promo.pbip
 
-
-mes	grupo	lineas	hl
-2025-01	Red Bull	2	2.70
-2025-02	Red Bull	4	5.53
-2025-03	Red Bull	4	3.24
-2025-04	Red Bull	5	2.22
-2025-05	Otro	1	0.40
-2025-05	Red Bull	36	15.18
-2025-06	Red Bull	16	13.11
-2025-07	Red Bull	19	22.20
-2025-08	Red Bull	22	17.82
-2025-09	Red Bull	19	15.24
-2025-10	Red Bull	26	12.78
-2025-11	Red Bull	16	19.14
-2025-12	Otro	1	0.00
-2025-12	Red Bull	15	13.93
-2026-01	Otro	1	0.00
-2026-01	Red Bull	11	13.32
-2026-02	Red Bull	20	17.70
-2026-03	Red Bull	15	7.38
-2026-04	Red Bull	19	13.98
-2026-05	Red Bull	83	45.54
-2026-06	Otro	1	0.00
-2026-06	Red Bull	87	50.52
-2026-07	Otro	1	0.00
-2026-07	Red Bull	39	33.72
-2026-08	Otro	1	0.00
-2026-08	Red Bull	115	43.92
-2026-09	Otro	1	0.00
-2026-09	Red Bull	107	50.42
-2026-10	Otro	1	0.00
-2026-10	Red Bull	54	56.70
-
-
-
-version	timestamp	operation	userName	notebook_id	job_id	job_name	clusterId
-5707	2026-11-17T10:42:06.000+00:00	DELETE	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	633607634162468	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504	1117-100322-5yjvus36
-5706	2026-11-17T10:42:02.000+00:00	VACUUM END	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	633607634162468	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504	1117-100322-5yjvus36
-5705	2026-11-17T10:41:59.000+00:00	VACUUM START	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	633607634162468	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504	1117-100322-5yjvus36
-5704	2026-11-17T10:41:38.000+00:00	MERGE	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	633607634162468	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504	1117-100322-5yjvus36
-5703	2026-11-17T07:36:01.000+00:00	DELETE	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	650952219807202	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9	1117-070118-u34v1bqq
-5702	2026-11-17T07:35:58.000+00:00	VACUUM END	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	650952219807202	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9	1117-070118-u34v1bqq
-5701	2026-11-17T07:35:56.000+00:00	VACUUM START	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	650952219807202	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9	1117-070118-u34v1bqq
-5700	2026-11-17T07:35:38.000+00:00	MERGE	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	650952219807202	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9	1117-070118-u34v1bqq
-5699	2026-11-16T10:44:04.000+00:00	DELETE	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	944192855960802	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_6d578096-3be0-41d3-934f-028ed0573c4f	1116-100237-otx03dte
-5698	2026-11-16T10:43:59.000+00:00	VACUUM END	90043866-4552-4fda-bc40-26062c29a02b	1506200897477795	944192855960802	ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_6d578096-3be0-41d3-934f-028ed0573c4f	1116-100237-otx03dte
-
-
-
-version	timestamp	userId	userName	operation	operationParameters	job	notebook	queryHistoryStatementId	clusterId	readVersion	isolationLevel	isBlindAppend	operationMetrics	userMetadata	engineInfo
-5707	2026-11-17T10:42:06.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	DELETE	{"predicate":"[\"(op_ind#37880 = D)\"]"}	{"jobId":"633607634162468","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504","jobRunId":null,"runId":"961869213057232","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-100322-5yjvus36	5706	WriteSerializable	false	{"numRemovedFiles":"0","numRemovedBytes":"0","numCopiedRows":"0","numDeletionVectorsAdded":"0","executionTimeMs":"1282","numAddedFiles":"0","numDeletionVectorsRemoved":"0","numAddedChangeFiles":"0","numDeletedRows":"0","scanTimeMs":"1281","numAddedBytes":"0","rewriteTimeMs":"0"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5706	2026-11-17T10:42:02.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	VACUUM END	{"status":"COMPLETED"}	{"jobId":"633607634162468","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504","jobRunId":null,"runId":"961869213057232","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-100322-5yjvus36	5705	SnapshotIsolation	true	{"numDeletedFiles":"4","numVacuumedDirectories":"169"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5705	2026-11-17T10:41:59.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	VACUUM START	{"retentionCheckEnabled":"true","defaultRetentionMillis":"2592000000"}	{"jobId":"633607634162468","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504","jobRunId":null,"runId":"961869213057232","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-100322-5yjvus36	5704	SnapshotIsolation	true	{"numFilesToDelete":"4","sizeOfDataToDelete":"14239379"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5704	2026-11-17T10:41:38.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	MERGE	{"predicate":"[\"(((invoice_date#14498 <=> invoice_date#27518) AND (invoice_number#14499 <=> invoice_number#27520)) AND (invoice_line_number#14502 <=> invoice_line_number#27523))\"]","matchedPredicates":"[{\"predicate\":\"false\",\"actionType\":\"delete\"},{\"predicate\":\"true\",\"actionType\":\"update\"}]","statsOnLoad":"false","notMatchedBySourcePredicates":"[]","notMatchedPredicates":"[{\"actionType\":\"insert\"}]"}	{"jobId":"633607634162468","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_722852f7-306d-40a5-ba83-8fe11f9e1504","jobRunId":null,"runId":"961869213057232","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-100322-5yjvus36	5703	WriteSerializable	false	{"numTargetRowsCopied":"92690","numTargetRowsDeleted":"0","numTargetBytesRemoved":"6799682","numTargetDeletionVectorsAdded":"0","numTargetRowsMatchedUpdated":"4949","numTargetRowsMatchedDeleted":"0","scanTimeMs":"3887","numTargetRowsUpdated":"4949","numTargetChangeFilesAdded":"0","numTargetRowsNotMatchedBySourceDeleted":"0","rewriteTimeMs":"6673","numTargetFilesAdded":"1","numTargetBytesAdded":"6826404","executionTimeMs":"389589","materializeSourceTimeMs":"378589","numTargetRowsInserted":"0","numOutputRows":"97639","numTargetDeletionVectorsRemoved":"0","numTargetRowsNotMatchedBySourceUpdated":"0","numSourceRows":"4949","numTargetFilesRemoved":"1"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5703	2026-11-17T07:36:01.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	DELETE	{"predicate":"[\"(op_ind#38160 = D)\"]"}	{"jobId":"650952219807202","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9","jobRunId":null,"runId":"287359112982829","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-070118-u34v1bqq	5702	WriteSerializable	false	{"numRemovedFiles":"0","numRemovedBytes":"0","numCopiedRows":"0","numDeletionVectorsAdded":"0","executionTimeMs":"1029","numAddedFiles":"0","numDeletionVectorsRemoved":"0","numAddedChangeFiles":"0","numDeletedRows":"0","scanTimeMs":"1028","numAddedBytes":"0","rewriteTimeMs":"0"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5702	2026-11-17T07:35:58.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	VACUUM END	{"status":"COMPLETED"}	{"jobId":"650952219807202","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9","jobRunId":null,"runId":"287359112982829","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-070118-u34v1bqq	5701	SnapshotIsolation	true	{"numDeletedFiles":"0","numVacuumedDirectories":"169"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5701	2026-11-17T07:35:56.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	VACUUM START	{"retentionCheckEnabled":"true","defaultRetentionMillis":"2592000000"}	{"jobId":"650952219807202","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9","jobRunId":null,"runId":"287359112982829","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-070118-u34v1bqq	5700	SnapshotIsolation	true	{"numFilesToDelete":"0","sizeOfDataToDelete":"0"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5700	2026-11-17T07:35:38.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	MERGE	{"predicate":"[\"(((invoice_date#14502 <=> invoice_date#27522) AND (invoice_number#14503 <=> invoice_number#27524)) AND (invoice_line_number#14506 <=> invoice_line_number#27527))\"]","matchedPredicates":"[{\"predicate\":\"false\",\"actionType\":\"delete\"},{\"predicate\":\"true\",\"actionType\":\"update\"}]","statsOnLoad":"false","notMatchedBySourcePredicates":"[]","notMatchedPredicates":"[{\"actionType\":\"insert\"}]"}	{"jobId":"650952219807202","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_32928d0e-5266-4afd-92c3-42550a5225d9","jobRunId":null,"runId":"287359112982829","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1117-070118-u34v1bqq	5699	WriteSerializable	false	{"numTargetRowsCopied":"92690","numTargetRowsDeleted":"0","numTargetBytesRemoved":"6479754","numTargetDeletionVectorsAdded":"0","numTargetRowsMatchedUpdated":"292","numTargetRowsMatchedDeleted":"0","scanTimeMs":"3903","numTargetRowsUpdated":"292","numTargetChangeFilesAdded":"0","numTargetRowsNotMatchedBySourceDeleted":"0","rewriteTimeMs":"6982","numTargetFilesAdded":"1","numTargetBytesAdded":"6799682","executionTimeMs":"12404","materializeSourceTimeMs":"1371","numTargetRowsInserted":"4657","numOutputRows":"97639","numTargetDeletionVectorsRemoved":"0","numTargetRowsNotMatchedBySourceUpdated":"0","numSourceRows":"4949","numTargetFilesRemoved":"1"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5699	2026-11-16T10:44:04.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	DELETE	{"predicate":"[\"(op_ind#44049 = D)\"]"}	{"jobId":"944192855960802","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_6d578096-3be0-41d3-934f-028ed0573c4f","jobRunId":null,"runId":"816942606625560","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1116-100237-otx03dte	5698	WriteSerializable	false	{"numRemovedFiles":"0","numRemovedBytes":"0","numCopiedRows":"0","numDeletionVectorsAdded":"0","executionTimeMs":"1618","numAddedFiles":"0","numDeletionVectorsRemoved":"0","numAddedChangeFiles":"0","numDeletedRows":"0","scanTimeMs":"1617","numAddedBytes":"0","rewriteTimeMs":"0"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
-5698	2026-11-16T10:43:59.000+00:00	6943443379772132	90043866-4552-4fda-bc40-26062c29a02b	VACUUM END	{"status":"COMPLETED"}	{"jobId":"944192855960802","jobName":"ADF_brewdat-maz-maz-sales-sellin-adf-p_pl_generic_run_databricks_notebook_v0_1_0_Run Databricks notebook job cluster_6d578096-3be0-41d3-934f-028ed0573c4f","jobRunId":null,"runId":"816942606625560","jobOwnerId":"6943443379772132","triggerType":"manual","workspaceId":null}	{"notebookId":"1506200897477795"}	null	1116-100237-otx03dte	5697	SnapshotIsolation	true	{"numDeletedFiles":"2","numVacuumedDirectories":"169"}	null	Databricks-Runtime/13.3.x-photon-scala2.12
+no changes added to commit (use "git add" and/or "git commit -a")
+PS C:\MAZ_Command Center PA - revenue-descuentos-promo>  
