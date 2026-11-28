@@ -1,14 +1,61 @@
-cd "C:\MAZ_Command Center PA"
-git fetch origin
-git worktree add -b pbi/revenue-descuentos-promo "C:\MAZ_Command Center PA - revenue-descuentos-promo" origin/main
-
-
-cd "C:\MAZ_Command Center PA - revenue-descuentos-promo"
-git add -A "BrewDat Prod MAZ Panama/Command Center"
-git status
-
-
-git commit -m "pbi_pa_revenue_descuentos_promo: reemplaza pbi_pa_descuentos_promo en Command Center (Databricks con historia desde SharePoint, filtros de particion, warehouse de Panama)"
-git push -u origin pbi/revenue-descuentos-promo
-
-
+-- Regalías nuevas, noviembre 2026: detalle por asiento con centro de beneficio
+WITH g AS (
+    SELECT CAST(budat AS DATE) AS fecha_contab,
+           TRIM(refdocnr) AS factura,
+           posnr,
+           TRIM(docnr) AS doc_contable,
+           TRIM(racct) AS cuenta,
+           TRIM(rprctr) AS centro_beneficio,
+           drcrk,
+           TRIM(COALESCE(fkart, '')) AS clase_factura,
+           hsl
+    FROM brewdat_uc_delta_maz_prod.slv_maz_finance_sap_pr3.copecac_glpca
+    WHERE __partition_column = '202611'
+      AND rbukrs = 'DC00'
+      AND budat BETWEEN '2026-11-01' AND '2026-11-30'
+      AND racct IN ('S411505AT0', 'S411505ATI', 'S411505CT0', 'S411505FT0',
+                    'S431105BT0', 'S431105CT0', 'S431105ET0', 'S431105FT0', 'S5313011TP')
+),
+k AS (
+    SELECT vbeln, kunag
+    FROM (
+        SELECT TRIM(vbeln) AS vbeln, TRIM(kunag) AS kunag, op_ind,
+               ROW_NUMBER() OVER (PARTITION BY vbeln ORDER BY source_commit_ts DESC) AS rn
+        FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrk
+        WHERE __partition_column BETWEEN '202609' AND '202612'
+          AND TRIM(vbeln) IN (SELECT factura FROM g)
+    ) x
+    WHERE rn = 1 AND UPPER(TRIM(COALESCE(op_ind, ''))) NOT IN ('D', 'DELETE')
+),
+p AS (
+    SELECT vbeln, posnr, matnr, vkaus, fkimg, vrkme, mwsbp, volum
+    FROM (
+        SELECT TRIM(vbeln) AS vbeln, posnr, matnr, vkaus, fkimg, vrkme, mwsbp, volum, op_ind,
+               ROW_NUMBER() OVER (PARTITION BY vbeln, posnr ORDER BY source_commit_ts DESC) AS rn
+        FROM brewdat_uc_delta_maz_prod.slv_maz_sales_sap_pr3.copecac_vbrp
+        WHERE __partition_column BETWEEN '20260915' AND '20261231'
+          AND TRIM(vbeln) IN (SELECT factura FROM g)
+    ) x
+    WHERE rn = 1 AND UPPER(TRIM(COALESCE(op_ind, ''))) NOT IN ('D', 'DELETE')
+)
+SELECT g.fecha_contab,
+       g.factura,
+       g.posnr AS pos,
+       g.doc_contable,
+       g.cuenta,
+       g.centro_beneficio,
+       g.drcrk AS d_h,
+       g.clase_factura,
+       TRIM(COALESCE(p.vkaus, '')) AS utilizacion,
+       regexp_replace(TRIM(p.matnr), '^0+', '') AS material,
+       regexp_replace(k.kunag, '^0+', '') AS cliente,
+       p.fkimg AS cantidad_facturada,
+       p.vrkme AS um,
+       ROUND(g.hsl, 2) AS importe_usd,
+       p.mwsbp AS itbms_linea_usd,
+       p.volum AS volumen_ccm,
+       ROUND(COALESCE(p.volum, 0) * CASE WHEN g.drcrk = 'H' THEN -1 ELSE 1 END / 100000, 4) AS volumen_hl
+FROM g
+LEFT JOIN p ON p.vbeln = g.factura AND p.posnr = g.posnr
+LEFT JOIN k ON k.vbeln = g.factura
+ORDER BY g.fecha_contab, g.factura, g.posnr, g.cuenta;
